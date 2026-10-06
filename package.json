@@ -1,0 +1,8 @@
+{
+  "name": "hoh-family",
+  "private": true,
+  "description": "HOH Family – House of Honour Family app (website + phone alerts function)",
+  "dependencies": {
+    "firebase-admin": "^12.7.0"
+  }
+}

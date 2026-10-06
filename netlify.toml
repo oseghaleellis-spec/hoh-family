@@ -1,0 +1,14 @@
+# HOH Family – tells Netlify where things are. No build step is needed.
+[build]
+  publish = "site"
+  functions = "netlify/functions"
+  command = ""
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["firebase-admin"]
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
