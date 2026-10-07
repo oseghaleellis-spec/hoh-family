@@ -8,6 +8,10 @@
   node_bundler = "esbuild"
   external_node_modules = ["firebase-admin"]
 
+# Every day at 07:00 Lagos time (06:00 UTC): programme reminders 3 days ahead
+[functions."reminders"]
+  schedule = "0 6 * * *"
+
 [[headers]]
   for = "/sw.js"
   [headers.values]
