@@ -509,6 +509,24 @@ button.setrow{cursor:pointer}.setrow.danger,.setrow.danger svg{color:var(--crit)
 @media (max-width:980px){.helpfab{display:none!important}.helptop{display:grid}.board.wcb{grid-template-columns:repeat(6,78vw)}.suphd{grid-template-columns:1fr}}
 @media (max-width:420px){#themeBtn{display:none}}
 .stats .stat .v{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:clamp(18px,2.1vw,28px)}
+/* v10 */
+.f.ro .rol{font-size:12px;font-weight:700;color:var(--muted)}
+.f.ro .rov{font-size:14px;font-weight:500;color:var(--fg);padding:6px 0 4px;border-bottom:1px dashed var(--line);display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:30px;word-break:break-word}
+.seen{display:inline-flex;align-items:center;gap:4px;background:none;border:0;padding:0;color:var(--brand);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.seen svg{width:14px;height:14px}
+.msg .tk{text-align:right;margin-top:2px;line-height:1}
+.ticks{background:none;border:0;padding:0 2px;font-size:12px;font-weight:700;letter-spacing:-2px;color:rgba(255,255,255,.7);cursor:pointer}
+.ticks.some{color:rgba(255,255,255,.95)}.ticks.all{color:#7fd3ff}
+.mbars{display:grid;grid-template-columns:repeat(24,1fr);gap:3px;align-items:end;height:120px;margin-bottom:8px}
+.mbars.sm{grid-template-columns:repeat(14,1fr);height:80px}
+.mbar{display:flex;flex-direction:column;justify-content:flex-end;height:100%;position:relative}
+.mbar i{display:block;background:var(--brand);opacity:.75;border-radius:4px 4px 0 0;min-height:2px}
+.mbar.night i{background:var(--crit,#b42318);opacity:.8}
+.mbar span{font-size:10px;color:var(--muted);text-align:center;height:12px;line-height:12px}
+.rbar{height:5px;border-radius:4px;background:var(--surface2);margin-top:6px;overflow:hidden;max-width:220px}
+.rbar i{display:block;height:100%}.rbar i.p-ok{background:var(--ok,#1a7f37)}.rbar i.p-warn{background:var(--warn,#b54708)}.rbar i.p-crit{background:var(--crit,#b42318)}
+.malert{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--surface2);color:var(--warn,#b54708)}
+.malert svg{width:18px;height:18px}
 </style>
 
 <style>body{padding-top:env(safe-area-inset-top,0px)}</style>
@@ -563,7 +581,7 @@ const OWNER_EMAILS = ["oseghaleellis@gmail.com"];
    L.querySelector("#lgGoogle").onclick=async()=>{msg("");const p=new firebase.auth.GoogleAuthProvider();try{await auth.signInWithPopup(p);}catch(e){if(["auth/popup-blocked","auth/operation-not-supported-in-this-environment"].includes(e.code))await auth.signInWithRedirect(p);else msg(friendly(e));}};
    L.querySelectorAll("[data-lm]").forEach(b=>b.onclick=()=>{mode=b.dataset.lm;drawLogin();});
    L.querySelector("#lgForm").onsubmit=async ev=>{ev.preventDefault();msg("");const em=L.querySelector("#lgEmail").value.trim(),pw=L.querySelector("#lgPass").value;
-     try{if(mode==="up"){const c=await auth.createUserWithEmailAndPassword(em,pw);const nm=L.querySelector("#lgName").value.trim();if(nm)await c.user.updateProfile({displayName:nm});location.reload();}else await auth.signInWithEmailAndPassword(em,pw);}catch(e){msg(friendly(e));}};
+     try{if(mode==="up"){const c=await auth.createUserWithEmailAndPassword(em,pw);const nm=L.querySelector("#lgName").value.trim();if(nm)await c.user.updateProfile({displayName:nm});location.reload();}else await auth.signInWithEmailAndPassword(em,pw);}catch(e){msg(friendly(e));if(mode!=="up"&&/wrong-password|invalid-credential|user-not-found|too-many-requests|invalid-login/.test(String(e&&e.code)))fetch("/.netlify/functions/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"fail",email:em,code:String(e.code||"")})}).catch(()=>{});}};
    const rs=L.querySelector("#lgReset");if(rs)rs.onclick=async()=>{const em=L.querySelector("#lgEmail").value.trim();if(!em){msg("Type your email above first, then tap “Forgot password?”.");return;}try{await auth.sendPasswordResetEmail(em);msg("A reset link is on its way to "+em+".");}catch(e){msg(friendly(e));}};}
   let started=false;
   auth.onAuthStateChanged(u=>{user=u;if(!u){drawLogin();L.hidden=false;return;}L.hidden=true;if(started)return;started=true;const go=()=>window.__startApp?window.__startApp():setTimeout(go,50);go();});
@@ -723,7 +741,8 @@ function lists(){const o={...DEF_LISTS};for(const[k,v]of Object.entries(settings
 const G={};            // group sub-collections: "teams/<g>/<sub>" -> rows
 const myMember=()=>S.members.find(x=>x._id===me.id);
 function myRoleIds(){if(isOwner)return["admin","member"];const m=myMember();if(!m)return[];const ids=new Set(["member",...(m.rid||[]),...(m.groups||[])]);return[...ids];}
-const isAdminUser=()=>isOwner||myRoleIds().includes("admin");
+const isAdminUser=()=>isOwner||myRoleIds().some(r=>r==="admin"||r==="super-admin");
+const isSA=()=>isOwner||((myMember()||{}).rid||[]).includes("super-admin");
 const myGroups=()=>{const m=myMember();return isOwner&&!m?[]:((m&&m.groups)||[]);};
 const groupById=id=>S.teams.find(t=>t._id===id);
 const groupName=id=>{const g=groupById(id);if(g)return g.name;const c=(settings.customRoles||[]).find(r=>r.id===id);return c?c.name:({admin:"Admin","group-lead":"Group leads","member":"Everyone"}[id]||id);};
@@ -792,7 +811,7 @@ function unsub(key){if(SUBS[key]){try{SUBS[key]();}catch(e){}delete SUBS[key];}}
 const rows=snap=>snap.docs.map(d=>({_id:d.id,...d.data()}));
 function syncSubs(){if(!db)return;const approved=isOwner||!!myMember();if(approved)syncCore();
   for(const[c,mod]of Object.entries(COLL_MOD)){if(c==="members"||c==="profiles")continue;const want=approved&&(mod===""?true:can(mod));let ref=db.collection(c);if(c==="activity"&&ref.orderBy)ref=ref.orderBy("at","desc").limit(800);
-    if(want)sub("c:"+c,ref,snap=>{S[c]=rows(snap);loaded|=1;if(c==="programs")schedulePublic();if(c==="teams")syncSubs();rerender();});else if(SUBS["c:"+c]){unsub("c:"+c);S[c]=[];}}
+    if(want)sub("c:"+c,ref,snap=>{S[c]=c==="people"?mergePeople(rows(snap)):rows(snap);loaded|=1;if(c==="programs")schedulePublic();if(c==="teams")syncSubs();rerender();});else if(SUBS["c:"+c]){unsub("c:"+c);S[c]=[];}}
   if(!approved)return;
   sub("pub",db.doc("public/calendar"),s=>{PUBCAL=s.exists?s.data():null;rerender();});
   if(me.id){let ib=db.collection(`inbox/${me.id}/items`);if(ib.orderBy)ib=ib.orderBy("at","desc").limit(150);sub("inbox",ib,snap=>{INBOX=rows(snap).sort((a,b)=>(b.at||"").localeCompare(a.at||""));try{onInbox(INBOX);}catch(e){}rerender();});}
@@ -803,7 +822,7 @@ function syncSubs(){if(!db)return;const approved=isOwner||!!myMember();if(approv
   // my own join requests
   const p=S.profiles.find(x=>x._id===me.id);for(const g of ((p&&p.req)||[]))if(!myGroups().includes(g))sub(`req:${g}`,db.doc(`teams/${g}/crew/${me.id}`),s=>{G[`req/${g}`]=s.exists?s.data():null;rerender();});
   // approval queues for every role I hold
-  for(const r of (isAdminUser()?["admin",...S.teams.map(t=>t._id),"group-lead"]:myRoleIds()))sub(`q:${r}`,db.collection(`queues/${r}/items`),snap=>{QUEUES[r]=rows(snap).map(x=>({...x,queue:r}));rerender();});
+  for(const r of (isAdminUser()?["admin",...S.teams.map(t=>t._id),"group-lead",...(isSA()?["super-admin"]:[])]:myRoleIds().filter(r=>r!=="super-admin")))sub(`q:${r}`,db.collection(`queues/${r}/items`),snap=>{QUEUES[r]=rows(snap).map(x=>({...x,queue:r}));rerender();});
   syncFamily();
 }
 let pubT;function schedulePublic(){if(!canE("programs"))return;clearTimeout(pubT);pubT=setTimeout(async()=>{const from=iso(addD(today(),-30)),to=iso(addD(today(),400));
@@ -847,7 +866,7 @@ async function del(coll,id,{quiet}={}){const arr=store(coll);const r=arr.find(x=
 async function saveSettings(patch,msg){settings={...settings,...patch};L=lists();rerender();try{const c={...settings};await db.doc("settings/main").set(c);if(msg)toast(msg);logAct("updated","settings","main",Object.keys(patch).join(", "));}catch(e){toast(errMsg(e));}}
 async function notify(uids,title,body,page){const at=new Date().toISOString();const sent=[];for(const u of new Set(uids)){if(!u||u===me.id)continue;try{await db.collection(`inbox/${u}/items`).add({title,body:body||"",page:page||"",at,read:false,from:me.id});sent.push(u);}catch(e){}}
   if(sent.length&&window.HOH_WEB&&window.HOH_WEB.pushSend&&settings.vapidKey){for(let i=0;i<sent.length;i+=400)window.HOH_WEB.pushSend({uids:sent.slice(i,i+400),title:String(title||"").slice(0,120),body:String(body||"").slice(0,240),page:page||"alerts"}).catch(()=>{});}}
-const usersWithRole=r=>S.members.filter(m=>(m.rid||[]).includes(r)||(m.groups||[]).includes(r)).map(m=>m._id).concat(r==="admin"&&settings.ownerUid?[settings.ownerUid]:[]);
+const usersWithRole=r=>S.members.filter(m=>(m.rid||[]).includes(r)||(m.groups||[]).includes(r)).map(m=>m._id).concat((r==="admin"||r==="super-admin")&&settings.ownerUid?[settings.ownerUid]:[]);
 
 // ================= theme =================
 function applyTheme(){const m=LS.get("theme","system");const r=document.documentElement;if(m==="system")r.removeAttribute("data-mode");else r.setAttribute("data-mode",m);}
@@ -978,9 +997,9 @@ function LT(key,cfg){LCFG[key]=cfg;const st=lstate(key,cfg);const R=lrows(key,cf
   const fo=fl=>{const o=typeof fl.opts==="function"?fl.opts():fl.opts||[...new Set(cfg.rows.map(fl.get).filter(v=>v!==""&&v!=null))].sort();return `<select class="in" data-lf="${key}|${fl.k}" aria-label="${esc(fl.label)}"><option value="">${esc(fl.label)}: All</option>${o.map(v=>`<option ${st.f[fl.k]===String(v)?"selected":""} value="${esc(v)}">${esc(v)}</option>`).join("")}</select>`;};
   const chips=cfg.chips?`<div class="chips" style="padding:12px 14px 0">${cfg.chips.map(c=>`<button class="chip ${st.chip===c.k?"on":""}" data-lchip="${key}|${c.k}">${esc(c.label)}<b>${cfg.rows.filter(c.test).length}</b></button>`).join("")}</div>`:"";
   const allOn=V.length&&V.every(r=>sel.has(r._id));
-  const bar=bulk&&sel.size?`<div class="bulkbar"><b>${sel.size} selected</b><button class="btn sm ghost" data-lselall="${key}">Select all ${R.length} shown</button><button class="btn sm ghost" data-lselnone="${key}">Clear</button><span style="flex:1"></span>${bulkFields(cfg).length?`<button class="btn sm" data-lbset="${key}">${ic("edit")}Change a field</button>`:""}${dl?`<button class="btn sm ghost" data-lcsv="${key}" data-only="1">${ic("dl")}Export selected</button>`:""}<button class="btn sm danger" data-lbdel="${key}">${ic("trash")}Delete</button></div>`:"";
+  const bar=bulk&&sel.size?`<div class="bulkbar"><b>${sel.size} selected</b><button class="btn sm ghost" data-lselall="${key}">Select all ${R.length} shown</button><button class="btn sm ghost" data-lselnone="${key}">Clear</button><span style="flex:1"></span>${bulkFields(cfg).length?`<button class="btn sm" data-lbset="${key}">${ic("edit")}Change a field</button>`:""}${dl&&can("export")?`<button class="btn sm ghost" data-lcsv="${key}" data-only="1">${ic("dl")}Export selected</button>`:""}<button class="btn sm danger" data-lbdel="${key}">${ic("trash")}Delete</button></div>`:"";
   return `<div class="card">${chips}<div class="lt"><div class="search">${ic("search")}<input class="in" id="lq_${key}" data-lq="${key}" placeholder="${esc(cfg.ph||"Search…")}" value="${esc(st.q)}" aria-label="Search"></div>${(cfg.filters||[]).map(fo).join("")}
-   <select class="in" data-lsize="${key}" aria-label="Rows to show">${[10,25,50,100,"All"].map(s=>`<option ${String(st.size)===String(s)?"selected":""} value="${s}">Show ${s}</option>`).join("")}</select>${dl?`<button class="btn ghost sm" data-lcsv="${key}" title="Download this list">${ic("dl")}Export</button>`:""}${bulk?`<button class="btn ghost sm" data-limport="${key}" title="Upload many rows from Excel or CSV">${ic("up")}Bulk upload</button>`:""}</div>${bar}
+   <select class="in" data-lsize="${key}" aria-label="Rows to show">${[10,25,50,100,"All"].map(s=>`<option ${String(st.size)===String(s)?"selected":""} value="${s}">Show ${s}</option>`).join("")}</select>${dl&&can("export")?`<button class="btn ghost sm" data-lcsv="${key}" title="Download this list">${ic("dl")}Export</button>`:""}${bulk?`<button class="btn ghost sm" data-limport="${key}" title="Upload many rows from Excel or CSV">${ic("up")}Bulk upload</button>`:""}</div>${bar}
   ${R.length?`<div class="tw"><table class="rt"><thead><tr>${bulk?`<th style="width:34px"><input type="checkbox" data-lpage="${key}" ${allOn?"checked":""} aria-label="Select all on this page"></th>`:""}${cfg.cols.map(c=>`<th class="${c.nosort?"":"s"} ${c.num?"num":""}" ${c.nosort?"":`data-lsort="${key}|${c.k}"`} ${st.sort===c.k?`aria-sort="${st.dir==="asc"?"ascending":"descending"}"`:""}>${esc(c.label)}${c.nosort?"":`<span class="ar">${st.sort===c.k?(st.dir==="asc"?"▲":"▼"):"↕"}</span>`}</th>`).join("")}</tr></thead>
    <tbody>${V.map(r=>`<tr class="${cfg.open?"rw":""} ${sel.has(r._id)?"selrow":""}" ${cfg.open?cfg.open(r):""}>${bulk?`<td class="ck" data-l="Select"><input type="checkbox" data-lsel="${key}|${esc(r._id)}" ${sel.has(r._id)?"checked":""} aria-label="Select"></td>`:""}${cfg.cols.map((c,i)=>`<td class="${i===0?"first":""} ${c.num?"num":""}" data-l="${esc(c.label)}">${c.html?c.html(r):esc(c.get(r)??"")}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
    <div class="lf"><span>Showing ${st.page*size+1}–${Math.min(R.length,st.page*size+size)} of ${R.length}${R.length!==cfg.rows.length?` (filtered from ${cfg.rows.length})`:""}</span>${pages>1?`<div class="pg"><button class="btn ghost sm" data-lpg="${key}|${st.page-1}" ${st.page===0?"disabled":""}>Previous</button><span>Page ${st.page+1} of ${pages}</span><button class="btn ghost sm" data-lpg="${key}|${st.page+1}" ${st.page>=pages-1?"disabled":""}>Next</button></div>`:""}</div>`
@@ -1054,7 +1073,7 @@ const SC={
 };
 const ENUM_CLS={Done:"p-ok",Completed:"p-ok",Confirmed:"p-ok",Served:"p-ok",Integrated:"p-ok",Approved:"p-ok",Sent:"p-info",Honoured:"p-ok",Acknowledged:"p-ok",WIP:"p-info","In progress":"p-info",Ongoing:"p-info",Blocked:"p-crit",Declined:"p-crit","No-show":"p-crit","Swap requested":"p-warn",Submitted:"p-warn","Under review":"p-warn","Returned for changes":"p-crit",Draft:"p-off",Planned:"p-off",Requested:"p-warn",Cancelled:"p-off"};
 const epill=v=>v?pill(v,ENUM_CLS[v]||statCls(v)):"";
-function fieldHTML([k,label,type="text",wide],rec,dis){const v=rec[k]??"";const d=dis?"disabled":"";let inp;
+function fieldHTML([k,label,type="text",wide],rec,dis){const v=rec[k]??"";if(dis)return roField([k,label,type,wide],rec);const d=dis?"disabled":"";let inp;
   if(type==="area")inp=`<textarea class="in" id="f_${k}" ${d}>${esc(v)}</textarea>`;
   else if(type.startsWith("sel:")){const o=L[type.slice(4)]||[];inp=`<select class="in" id="f_${k}" ${d}><option value=""></option>${o.map(x=>`<option ${v===x?"selected":""}>${esc(x)}</option>`).join("")}${v&&!o.includes(v)?`<option selected>${esc(v)}</option>`:""}</select>`;}
   else if(type.startsWith("multi:")){const src=type.slice(6);const o=src==="team"?S.teams.slice().sort(byFull).map(t=>t.name):src==="aud"?["Everyone",...openGroups().map(t=>t.name)]:(L[src]||[]);const cur=String(v||"").split(/\s*,\s*/).filter(Boolean);return `<div class="f ${wide?"wide":""}">${label}${multiHTML("f_"+k,[...new Set([...o,...cur])].map(x=>[x,x]),cur)}</div>`;}
@@ -1217,7 +1236,7 @@ function openProposal(id){const rec=id?{...(S.proposals.find(x=>x._id===id)||{})
   const pd2=document.getElementById("pDel");if(pd2){let armed=false;pd2.onclick=async()=>{if(!armed){armed=true;pd2.textContent="Tap again to delete";return;}if(await del("proposals",id))closeLayer();};}}
 
 // actions
-P.actions=()=>PH("Actions","check","Every deliverable has an owner and a due date · overdue more than 7 days escalates to the Chair/Vice (SOP §9)",`${btn(`${ic("wa")}Reminders`,'data-remind="actions"',"ghost")}${addBtn("actions","actions","New action")}`)+
+P.actions=()=>PH("Actions","check","Every deliverable has an owner and a due date · overdue more than 7 days escalates to the Chair/Vice (SOP §9)",`${canE("actions")?btn(`${ic("wa")}Reminders`,'data-remind="actions"',"ghost"):""}${addBtn("actions","actions","New action")}`)+
  LT("actions",{coll:"actions",mod:"actions",rows:S.actions,sort:"due",open:a=>`data-open="actions|${esc(a._id)}"`,text:a=>[a.act,a.owner,a.team,progName(a.pid),a.section].join(" "),
   cols:[{k:"due",label:"Due",get:a=>aDue(a)?iso(aDue(a)):"",html:a=>aDue(a)?`<b>${fmtS(iso(aDue(a)))}</b>`:`<span class="muted">No date</span>`},
    {k:"act",label:"Action",get:a=>a.act,html:a=>`<div class="t">${esc(a.act)}</div><div class="m">${esc(progName(a.pid)||"General")}${a.section?" · "+esc(a.section):""}</div>`},
@@ -1324,7 +1343,7 @@ function runSheet(){const pl=planDraft;if(!pl)return;const items=[];let t=pl.sta
 
 // rosters
 P.rosters=()=>{const tab=LS.get("rosTab","a");
-  return PH("Rosters","users","Who serves where · clashes with other duties or unavailable dates are flagged",`${btn(`${ic("wa")}Reminders`,'data-remind="roster"',"ghost")}${tab==="a"?addBtn("rosters","rosters","Assign someone",{date:tISO(),status:"Assigned",service:"Sunday Service"}):addBtn("rosters","blackouts","Add unavailable dates")}`)+
+  return PH("Rosters","users","Who serves where · clashes with other duties or unavailable dates are flagged",`${canE("rosters")?btn(`${ic("wa")}Reminders`,'data-remind="roster"',"ghost"):""}${tab==="a"?addBtn("rosters","rosters","Assign someone",{date:tISO(),status:"Assigned",service:"Sunday Service"}):addBtn("rosters","blackouts","Add unavailable dates")}`)+
   `<div class="chips" style="margin-bottom:12px"><button class="chip ${tab==="a"?"on":""}" data-rostab="a">Assignments</button><button class="chip ${tab==="b"?"on":""}" data-rostab="b">Unavailable dates</button></div>`+
   (tab==="a"?LT("rosters",{rows:S.rosters,sort:"date",open:r=>`data-open="rosters|${esc(r._id)}"`,text:r=>[r.person,r.role,r.team,r.service,progName(r.pid)].join(" "),
    cols:[{k:"date",label:"Date",get:r=>r.date||"",html:r=>`<b>${fmtS(r.date)}</b>`},{k:"service",label:"Service",get:r=>r.service||"",html:r=>`${esc(r.service||"")}<div class="m">${esc(progName(r.pid))}</div>`},{k:"role",label:"Role",get:r=>r.role||""},{k:"person",label:"Person",get:r=>r.person||"",html:r=>`<div class="t">${esc(r.person||"")}</div>${r.phone?`<a class="small" href="${waLink(r.phone,`Hello ${r.person}, a reminder that you are serving as ${r.role} at ${r.service} on ${fmtLong(r.date)}. God bless you.`)}" target="_blank" rel="noopener">WhatsApp</a>`:""}`},{k:"team",label:"Team",get:r=>r.team||""},{k:"status",label:"Status",get:r=>r.status||"",html:r=>epill(r.status||"Assigned")+rosterClash(r).map(c=>" "+pill(c,"p-crit")).join("")}],
@@ -1357,7 +1376,7 @@ P.attendance=()=>{if(!ctr)ctr={date:tISO(),service:"Sunday Service",area:L.AttAr
 
 // ================= people =================
 P.followup=()=>{const R=S.newcomers;const cnt=s=>R.filter(x=>(x.stage||"New")===s).length;
-  return PH("Follow-up","heart","First-timers and new converts, from first visit to fully integrated",`${btn(`${ic("users")}Quick add`,'data-new="newcomers" data-preset=\'{"kind":"First-timer","stage":"New"}\'',"ghost")}${addBtn("followup","newcomers","Add a person",{kind:"First-timer",stage:"New",date:tISO(),service:"Sunday Service"})}`)+
+  return PH("Follow-up","heart","First-timers and new converts, from first visit to fully integrated",`${canE("followup")?btn(`${ic("users")}Quick add`,'data-new="newcomers" data-preset=\'{"kind":"First-timer","stage":"New"}\'',"ghost"):""}${addBtn("followup","newcomers","Add a person",{kind:"First-timer",stage:"New",date:tISO(),service:"Sunday Service"})}`)+
   `<div class="stats" style="margin-bottom:16px">${L.FollowStage.map(s=>`<div class="stat"><div class="v ${s==="Integrated"?"c-ok":s==="New"?"c-warn":""}">${cnt(s)}</div><div class="l">${s}</div></div>`).join("")}</div>`+
   LT("newcomers",{coll:"newcomers",mod:"followup",rows:R,sort:"date",dir:"desc",open:x=>`data-person="${esc(x._id)}"`,text:x=>[x.name,x.phone,x.assigned,x.address,x.invitedBy].join(" "),
    cols:[{k:"date",label:"First visit",get:x=>x.date||"",html:x=>`<b>${fmtS(x.date)}</b>`},{k:"name",label:"Name",get:x=>x.name||"",html:x=>`<div class="t">${esc(x.name)}</div><div class="m">${esc(x.kind||"")}${x.interest?" · wants to join "+esc(x.interest):""}</div>`},
@@ -1564,7 +1583,7 @@ let permT,ownerMade=false;function syncFamily(){
   if(me.id)sub("supme",db.doc(`support/${me.id}`),s=>{G.supme=s.exists?s.data():null;rerender();});
   for(const g of (isAdminUser()||isPastor()?S.teams.map(t=>t._id):mySpaces()))gsub(g,"crew");
   if(isOwner&&(loaded&2)&&dbWritable&&!S.members.some(m=>m._id===me.id)&&!ownerMade){ownerMade=true;save("members",me.id,{rid:["admin","member"],groups:[],gchg:""},{quiet:true,log:false});}
-  if(isAdminUser()&&dbWritable&&(loaded&1)&&S.teams.length){clearTimeout(permT);permT=setTimeout(()=>{const pg=openGroups().map(t=>({_id:t._id,name:t.name,parent:t.parent||""}));if(canon(pg)!==canon(G.pubgroups||null)){G.pubgroups=pg;setDoc("public/groups",{items:pg,at:nowISO()});}const p=permMap();const patch={};if(canon(p)!==canon(settings.perm||null))patch.perm=p;if(!settings.hierInit){const h={...(settings.hier||{})};for(const t of S.teams){if(h[t._id]||t._id==="pastorate")continue;h[t._id]=["key-programs-committee","secretariat"].includes(t._id)?"pastorate":"key-programs-committee";}patch.hier=h;patch.hierInit=true;}if(Object.keys(patch).length)saveSettings(patch);},1200);}}
+  if(isAdminUser()&&dbWritable&&(loaded&1)&&S.teams.length){clearTimeout(permT);permT=setTimeout(()=>{const pg=openGroups().map(t=>({_id:t._id,name:t.name,parent:t.parent||""}));if(canon(pg)!==canon(G.pubgroups||null)){G.pubgroups=pg;setDoc("public/groups",{items:pg,at:nowISO()});}const p=permMap();const patch={};if(isSA()&&canon(p)!==canon(settings.perm||null))patch.perm=p;if(isSA()&&!settings.hierInit){const h={...(settings.hier||{})};for(const t of S.teams){if(h[t._id]||t._id==="pastorate")continue;h[t._id]=["key-programs-committee","secretariat"].includes(t._id)?"pastorate":"key-programs-committee";}patch.hier=h;patch.hierInit=true;}if(Object.keys(patch).length)saveSettings(patch);},1200);}}
 async function loadImg(file){const url=URL.createObjectURL(file);try{return await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=url;});}finally{setTimeout(()=>URL.revokeObjectURL(url),2000);}}
 async function compressImg(file,size=160){const img=await loadImg(file);const s=Math.min(img.width,img.height);const c=document.createElement("canvas");c.width=c.height=size;c.getContext("2d").drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,size,size);return c.toDataURL("image/jpeg",.82);}
 async function shrinkImg(file,max=1100){const img=await loadImg(file);let m=max,q=.76,url="";for(let i=0;i<5;i++){const k=Math.min(1,m/Math.max(img.width,img.height));const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);url=c.toDataURL("image/jpeg",q);if(url.length<620000)return url;q=Math.max(.5,q-.08);m*=.82;}return url;}
@@ -1666,7 +1685,7 @@ function gtMembers(g){const t=groupById(g);const lead=isLeadOf(g);const fin=isFi
   const canDirect=closed?(isAdminUser()||(g==="pastorate"&&isPastor())):isAdminUser();
   const adder=canDirect?`<div class="addrow"><label class="f">Add someone directly<select class="in" id="gAddSel">${personOpts("","Choose a person…",others)}</select></label>${btn("Add",`data-gadd="${esc(g)}|direct"`,"pri")}</div>`:lead&&!closed?`<div class="addrow"><label class="f">Nominate someone to join<select class="in" id="gAddSel">${personOpts("","Choose a person…",others)}</select></label>${btn("Nominate",`data-gadd="${esc(g)}|nom"`,"pri")}</div><div class="small muted" style="margin:-6px 0 12px">Nominations go to ${(t.overseers||[]).length?"the group's overseer":"the Pastorate"} for final approval.</div>`:"";
   return top+adder+`<div class="card"><div class="rows">${mem.sort((a,b)=>who(a).localeCompare(who(b))).map(u=>{const isL=t.leadUid===u||(!t.leadUid&&(t.leads||[]).includes(u)),isA=t.asstUid===u;const sr=isL?"Lead":isA?"Assistant":(crew[u]||{}).sub||"Member";
-    return `<div class="ri" style="cursor:default"><div>${avatar(u,36)}</div><div style="min-width:0"><div class="t">${esc(who(u))}</div><div class="m">${prof(u).phone?`${esc(prof(u).phone)} · <a href="${waLink(prof(u).phone)}" target="_blank" rel="noopener">WhatsApp</a>`:esc(prof(u).email||"")}</div></div><div class="r">${lead&&!isL&&!isA?`<select class="in" style="width:auto" data-gsub="${esc(g)}|${esc(u)}" aria-label="Role in group">${[...new Set([...subroles().filter(x=>!["Lead","Assistant"].includes(x)),sr])].map(s=>`<option ${s===sr?"selected":""}>${esc(s)}</option>`).join("")}</select>${u!==me.id?`<button class="iconbtn" data-gremove="${esc(g)}|${esc(u)}" aria-label="Remove from group">${ic("x")}</button>`:""}`:pill(sr,isL||isA?"p-brand":"p-off")}</div></div>`;}).join("")||`<div class="empty">No members yet.</div>`}</div></div>
+    return `<div class="ri" style="cursor:default"><div>${avatar(u,36)}</div><div style="min-width:0"><div class="t">${esc(who(u))}</div><div class="m">${contactLine(u)}</div></div><div class="r">${lead&&!isL&&!isA?`<select class="in" style="width:auto" data-gsub="${esc(g)}|${esc(u)}" aria-label="Role in group">${[...new Set([...subroles().filter(x=>!["Lead","Assistant"].includes(x)),sr])].map(s=>`<option ${s===sr?"selected":""}>${esc(s)}</option>`).join("")}</select>${u!==me.id?`<button class="iconbtn" data-gremove="${esc(g)}|${esc(u)}" aria-label="Remove from group">${ic("x")}</button>`:""}`:pill(sr,isL||isA?"p-brand":"p-off")}</div></div>`;}).join("")||`<div class="empty">No members yet.</div>`}</div></div>
    ${(t.overseers||[]).length?`<div class="small muted" style="margin-top:10px">Overseen by ${t.overseers.map(who).map(esc).join(", ")}</div>`:""}`;}
 function gtLog(g){const lead=isLeadOf(g);const Lg=gcol(g,"log").slice().sort((a,b)=>(b.at||"").localeCompare(a.at||""));const canW=inGroup(g);
   return `${canW?`<div class="card" style="margin-bottom:12px"><div class="bd stack"><div class="grid g3"><label class="f">Kind<select class="in" id="glK">${["Meeting minutes","Activity","Decision","Prayer point","Other"].map(x=>`<option>${x}</option>`).join("")}</select></label><label class="f">Date<input class="in" type="date" id="glD" value="${tISO()}"></label></div><label class="f">What happened<textarea class="in" id="glT" placeholder="Minutes, decisions, attendance, follow-ups…"></textarea></label><div id="stg_glog">${stagedHTML("glog")}</div><div style="display:flex;justify-content:space-between;gap:8px">${attachBtn("glog")}${btn("Add to log",`data-glog="${esc(g)}"`,"pri")}</div></div></div>`:""}
@@ -1721,7 +1740,7 @@ function openRoster(g,id,preset={}){const R=g?gcol(g,"roster"):[];const rec=id?{
 H8.groster=t=>openRoster(t.dataset.groster||"",null);
 H8.rosedit=t=>{const[g,id]=t.dataset.rosedit.split("|");openRoster(g,id);};
 P.rosters=()=>{const tab=LS.get("rosTab","a");const ed=rosterGroups().length>0;
-  return PH("Rosters","users","Each group's lead manages its own roster · Pastorate, Programs Committee and Secretariat can assign across groups",`${btn(`${ic("wa")}Reminders`,'data-remind="roster"',"ghost")}${tab==="a"?(ed?btn(`${ic("plus")}Assign someone`,'data-groster=""',"pri"):""):addBtn("_open","blackouts","Add unavailable dates")}`)+
+  return PH("Rosters","users","Each group's lead manages its own roster · Pastorate, Programs Committee and Secretariat can assign across groups",`${canE("rosters")?btn(`${ic("wa")}Reminders`,'data-remind="roster"',"ghost"):""}${tab==="a"?(ed?btn(`${ic("plus")}Assign someone`,'data-groster=""',"pri"):""):addBtn("_open","blackouts","Add unavailable dates")}`)+
   `<div class="chips" style="margin-bottom:12px"><button class="chip ${tab==="a"?"on":""}" data-rostab="a">Assignments</button><button class="chip ${tab==="b"?"on":""}" data-rostab="b">Unavailable dates</button></div>`+
   (tab==="a"?rosterLT("rosters",S.rosters,ed,"")
   :LT("blackouts",{rows:S.blackouts,sort:"from",open:b=>`data-open="blackouts|${esc(b._id)}"`,coll:"blackouts",mod:"_open",cols:[{k:"person",label:"Person",get:b=>b.person||""},{k:"from",label:"From",get:b=>b.from||"",html:b=>fmtS(b.from)},{k:"to",label:"To",get:b=>b.to||"",html:b=>fmtS(b.to||b.from)},{k:"reason",label:"Reason",get:b=>b.reason||""}],chips:[{k:"cur",label:"Current & upcoming",test:b=>(b.to||b.from||"")>=tISO()},{k:"",label:"All",test:()=>true}],chip:"cur",emptyT:"No unavailable dates",emptyM:"Volunteers who will be away can be recorded here so they aren't rostered."}));};
@@ -2630,20 +2649,20 @@ function periodsSince(start,freq,to=today()){const s=pd(start);if(!s||s>to)retur
   if(freq==="Weekly")return Math.floor(dd(to,s)/7)+1;const m=(to.getFullYear()-s.getFullYear())*12+(to.getMonth()-s.getMonth())+(to.getDate()>=s.getDate()?0:-1);
   if(freq==="Monthly")return Math.max(0,m)+1;if(freq==="Quarterly")return Math.floor(Math.max(0,m)/3)+1;if(freq==="Annually")return Math.floor(Math.max(0,m)/12)+1;return 0;}
 function perPeriod(sc,plan){if(plan&&plan.amount!==""&&plan.amount!=null)return n(plan.amount);const f=(plan&&plan.freq)||sc.freq;if(sc.freq==="One-off"||f==="One-off"||f===sc.freq)return n(sc.amount);return Math.round(n(sc.amount)*PER_YEAR[sc.freq]/PER_YEAR[f]);}
-function duesRow(g,sc,u){const plan=gcol(g,"duesplan").find(p=>p.sid===sc._id&&p.uid===u)||null;const freq=(plan&&plan.freq)||sc.freq;const amt=perPeriod(sc,plan);const start=(plan&&plan.start)||sc.start;
+function duesRow(g,sc,u){const plan=null;const freq=(plan&&plan.freq)||sc.freq;const amt=perPeriod(sc,plan);const start=(plan&&plan.start)||sc.start;
   let periods=periodsSince(start,freq);if(sc.end&&sc.end<tISO())periods=Math.min(periods,periodsSince(start,freq,pd(sc.end)));const expected=periods*amt;
   const pays=duesPays(g).filter(p=>p.sid===sc._id&&p.uid===u);const paid=pays.reduce((s,p)=>s+n(p.amount),0);return{u,plan,freq,amt,start,periods,expected,paid,bal:expected-paid,pays};}
 function duesPays(g){const path=`teams/${g}/duespay`;if(isOfficer(g)||isOverseer(g)||can("finance"))gsub(g,"duespay");else{const c=db.collection(path);sub(`dp:${g}`,c.where?c.where("uid","==",me.id):c,snap=>{G[path]=rows(snap).filter(x=>x.uid===me.id);rerender();});}return G[path]||[];}
 const duesState=b=>b<=0?(b<0?pill("Ahead by "+naira(-b),"p-ok"):pill("Up to date","p-ok")):pill("Owing "+naira(b),"p-crit");
-GT_BODIES.dues=g=>{gsub(g,"dues");gsub(g,"duesplan");const off=isOfficer(g);const SC2=gcol(g,"dues").filter(s=>s.active!==false).sort((a,b)=>(a.kind||"").localeCompare(b.kind||"")||(a.name||"").localeCompare(b.name||""));
+GT_BODIES.dues=g=>{gsub(g,"dues");const off=isOfficer(g);const SC2=gcol(g,"dues").filter(s=>s.active!==false).sort((a,b)=>(a.kind||"").localeCompare(b.kind||"")||(a.name||"").localeCompare(b.name||""));
   let cur=LS.get("dues:"+g,"");if(!SC2.some(s=>s._id===cur))cur=(SC2[0]||{})._id||"";const sc=SC2.find(s=>s._id===cur);
   const head=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px"><div class="chips" style="flex:1">${SC2.map(s=>`<button class="chip ${s._id===cur?"on":""}" data-duessel="${esc(g)}|${esc(s._id)}">${esc(s.name)} <span class="small muted">${esc(s.kind||"Dues")}</span></button>`).join("")||`<span class="muted small">No dues or contributions set up yet.</span>`}</div>${off?`${sc?btn(`${ic("edit")}Edit`,`data-duesedit="${esc(g)}|${esc(sc._id)}"`,"ghost sm"):""}${btn(`${ic("plus")}New dues / contribution`,`data-duesedit="${esc(g)}|"`,"pri sm")}`:""}</div>`;
   if(!sc)return head+`<div class="card"><div class="empty"><b>Track dues and contributions</b>${off?"Set up monthly dues, a building levy or any contribution. Each member can pay weekly, monthly, quarterly or yearly – the app works out what is due.":"Your group's officers haven't set up dues yet."}</div></div>`;
   const mem=off||isOverseer(g)||can("finance")?groupMembers(g):[me.id].filter(u=>groupMembers(g).includes(u));const R=mem.map(u=>duesRow(g,sc,u));
   const tExp=R.reduce((s,r)=>s+r.expected,0),tPaid=R.reduce((s,r)=>s+r.paid,0),owing=R.filter(r=>r.bal>0);
-  return head+`<div class="card" style="margin-bottom:12px"><div class="bd small">${esc(sc.kind||"Dues")} · ${naira(sc.amount)} ${({Weekly:"per week",Monthly:"per month",Quarterly:"per quarter",Annually:"per year","One-off":"once"})[sc.freq]||""} · from ${fmtS(sc.start)}${sc.end?` to ${fmtS(sc.end)}`:""}${sc.note?` · ${esc(sc.note)}`:""}<br><span class="muted">Members can agree to pay weekly, monthly, quarterly or yearly – the amount per payment adjusts so the total stays the same.</span></div></div>
+  return head+`<div class="card" style="margin-bottom:12px"><div class="bd small">${esc(sc.kind||"Dues")} · ${naira(sc.amount)} ${({Weekly:"per week",Monthly:"per month",Quarterly:"per quarter",Annually:"per year","One-off":"once"})[sc.freq]||""} · from ${fmtS(sc.start)}${sc.end?` to ${fmtS(sc.end)}`:""}${sc.note?` · ${esc(sc.note)}`:""}<br><span class="muted">This applies to every member exactly as set by the group's officers.</span></div></div>
    ${off||isOverseer(g)?`<div class="stats" style="margin-bottom:12px"><div class="stat"><div class="v">${naira(tExp)}</div><div class="l">Expected to date</div></div><div class="stat"><div class="v c-ok">${naira(tPaid)}</div><div class="l">Collected</div></div><div class="stat"><div class="v ${owing.length?"c-crit":""}">${naira(Math.max(0,tExp-tPaid))}</div><div class="l">Outstanding · ${owing.length} member${owing.length===1?"":"s"}</div></div></div>`:""}
-   <div class="card"><div class="rows">${R.sort((a,b)=>b.bal-a.bal).map(r=>`<div class="ri" style="cursor:default"><div>${avatar(r.u,34)}</div><div style="min-width:0"><div class="t">${esc(who(r.u))}</div><div class="m">${esc(r.freq)} · ${naira(r.amt)} each · ${r.periods} due so far · paid ${naira(r.paid)}</div></div><div class="r">${duesState(r.bal)}${off?`<button class="btn sm pri" data-duespay="${esc(g)}|${esc(sc._id)}|${esc(r.u)}">Record payment</button>`:""}${off||r.u===me.id?`<button class="btn sm ghost" data-duesplan="${esc(g)}|${esc(sc._id)}|${esc(r.u)}">${r.u===me.id&&!off?"How I pay":"Plan"}</button>`:""}<button class="btn sm ghost" data-dueshist="${esc(g)}|${esc(sc._id)}|${esc(r.u)}">History</button></div></div>`).join("")||`<div class="empty">No members yet.</div>`}</div></div>`;};
+   <div class="card"><div class="rows">${R.sort((a,b)=>b.bal-a.bal).map(r=>`<div class="ri" style="cursor:default"><div>${avatar(r.u,34)}</div><div style="min-width:0"><div class="t">${esc(who(r.u))}</div><div class="m">${esc(r.freq)} · ${naira(r.amt)} each · ${r.periods} due so far · paid ${naira(r.paid)}</div></div><div class="r">${duesState(r.bal)}${off?`<button class="btn sm pri" data-duespay="${esc(g)}|${esc(sc._id)}|${esc(r.u)}">Record payment</button>`:""}<button class="btn sm ghost" data-dueshist="${esc(g)}|${esc(sc._id)}|${esc(r.u)}">History</button></div></div>`).join("")||`<div class="empty">No members yet.</div>`}</div></div>`;};
 H8.duessel=t=>{const[g,s]=t.dataset.duessel.split("|");LS.set("dues:"+g,s);render();};
 H8.duesedit=t=>{const[g,id]=t.dataset.duesedit.split("|");const x=id?{...(gcol(g,"dues").find(s=>s._id===id)||{})}:{kind:"Dues",freq:"Monthly",start:tISO().slice(0,8)+"01",active:true};
   sheet({title:id?x.name:"New dues / contribution",body:`<div class="grid g2"><label class="f wide">Name<input class="in" id="duN" value="${esc(x.name||"")}" placeholder="e.g. Monthly dues, Retreat levy, Uniform contribution"></label>
@@ -2652,7 +2671,7 @@ H8.duesedit=t=>{const[g,id]=t.dataset.duesedit.split("|");const x=id?{...(gcol(g
    <label class="f">Ends (optional)<input class="in" type="date" id="duE" value="${esc(x.end||"")}"></label><label class="f">Note<input class="in" id="duNo" value="${esc(x.note||"")}"></label></div>`,
    foot:`${id?`<button class="btn danger" id="duDel">${ic("trash")}Archive</button>`:""}<span style="flex:1"></span><button class="btn ghost" data-close="1">Cancel</button><button class="btn pri" id="duSave">Save</button>`});
   document.getElementById("duSave").onclick=async()=>{const d={...x,name:document.getElementById("duN").value.trim(),kind:document.getElementById("duK").value,amount:Number(document.getElementById("duA").value||0),freq:document.getElementById("duF").value,start:document.getElementById("duS").value,end:document.getElementById("duE").value,note:document.getElementById("duNo").value.trim(),active:true,by:x.by||me.id,at:x.at||nowISO()};delete d._id;
-    if(!d.name||!d.amount){toast("Enter a name and amount");return;}const nid=id||rid();if(await save(`teams/${g}/dues`,nid,d)){LS.set("dues:"+g,nid);closeLayer();if(!id)notify(groupMembers(g),`${groupName(g)}: ${d.name}`,`${naira(d.amount)} ${d.freq.toLowerCase()} – choose how you'd like to pay in the group's Dues tab.`,"mygroups:"+g);}};
+    if(!d.name||!d.amount){toast("Enter a name and amount");return;}const nid=id||rid();if(await save(`teams/${g}/dues`,nid,d)){LS.set("dues:"+g,nid);closeLayer();if(!id)notify(groupMembers(g),`${groupName(g)}: ${d.name}`,`${naira(d.amount)} ${d.freq.toLowerCase()} – see the group's Dues tab for details.`,"mygroups:"+g);}};
   const dd2=document.getElementById("duDel");if(dd2)dd2.onclick=async()=>{const d={...x,active:false};delete d._id;if(await save(`teams/${g}/dues`,id,d))closeLayer();};};
 H8.duesplan=t=>{const[g,sid,u]=t.dataset.duesplan.split("|");const sc=gcol(g,"dues").find(s=>s._id===sid);const p=gcol(g,"duesplan").find(x=>x.sid===sid&&x.uid===u)||{};const off=isOfficer(g);
   sheet({title:`${who(u)} · ${sc.name}`,body:`<p class="small muted" style="margin:0">Standard: ${naira(sc.amount)} ${sc.freq.toLowerCase()}. Choose how ${u===me.id?"you":"they"} agreed to pay – the amount per payment adjusts automatically.</p>
@@ -3481,6 +3500,417 @@ async function migratePriv(){if(!isAdminUser()||!dbWritable||settings.privMigrat
   R("match /libcards/{u} {\n      allow read: if approved();","match /libcards/{u} {\n      allow read: if canR('library') || (si() && uid() == u);");
   return s;};}
 
+// ================= HOH Family v10: contact privacy, view-only, read receipts, sounds =================
+Object.assign(ICP,{
+ shield:'<path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z"/>',
+ radar:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><path d="M12 12 19 5"/>',
+ alert:'<path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18h.01"/>'});
+Object.assign(MODDEF,{
+ seecontacts:["Contact details – see without asking (phone, email, address)","0000000",0],
+ suggestnotice:["Church notices – suggest one for approval","1010010",0],
+ export:["Download / export lists","1110010",0]});
+for(const[k,v]of Object.entries(MODDEF))MODS[k]=v[0];
+nameCache.system="HOH Family security";
+
+// ---------- read-only records: plain text, only what applies ----------
+function roField([k,label,type="text",wide],rec){const v=rec[k]??"";let out;
+  if(type.startsWith("multi:"))out=String(v||"").split(/\s*,\s*/).filter(Boolean).map(x=>pill(x,"p-info")).join(" ");
+  else if(type==="bday")out=esc(fmtBday(v));
+  else if(type==="chk")out=v?"Yes":"No";
+  else if(type==="prog")out=esc(v?progName(v):"");
+  else if(type==="asset")out=esc(((S.assets||[]).find(a=>a._id===v)||{}).name||"");
+  else if(type==="num")out=v===""?"":esc(Number(v).toLocaleString("en-NG"));
+  else if(type==="date")out=v?esc(fmtS(v)):"";
+  else out=`<span style="white-space:pre-wrap">${esc(v)}</span>`;
+  if(rec._hid&&["phone","email","address"].includes(k)&&!v){const h=rec[k+"Hint"];out=`<span class="muted">${esc(h||"Hidden")}</span> ${rec.uid?reqBtn(rec.uid):""}`;}
+  return `<div class="f ro ${wide?"wide":""}"><span class="rol">${label}</span><div class="rov">${out||`<span class="muted">—</span>`}</div></div>`;}
+
+// ---------- contact details: masked unless allowed ----------
+const CKEYS=["phone","email","address"];
+const canSeeAllContacts=()=>isAdminUser()||lvl("seecontacts")>=1;
+const maskPhone=p=>{const d=String(p||"").replace(/\D/g,"");return d.length>5?d.slice(0,3)+"•••••"+d.slice(-2):"•••••";};
+const maskEmail=e=>{const[a,b]=String(e||"").split("@");return b?(a||"?")[0]+"•••@"+b:"•••";};
+{const _sp=splitProf;splitProf=function(d){const[pub,pv]=_sp(d);if(pv.phone)pub.phoneHint=maskPhone(pv.phone);if(pv.email)pub.emailHint=maskEmail(pv.email);if(pv.address||pv.area)pub.addrHint="Hidden";return[pub,pv];};}
+function reqBtn(u){if(!u||u===me.id||!S.members.some(m=>m._id===u))return "";const r=(G.creqOut||[]).find(x=>x.to===u);
+  if(!r)return `<button class="btn sm ghost" data-creq="${esc(u)}">${ic("lock")}Request details</button>`;
+  return r.status==="Pending"?pill("Request sent","p-off"):r.status==="Declined"?pill("Not shared","p-off"):"";}
+function contactLine(u){const p=prof(u);if(p.phone)return `${esc(p.phone)} · <a href="${waLink(p.phone)}" target="_blank" rel="noopener">WhatsApp</a>`;if(p.email)return esc(p.email);
+  const h=p.phoneHint||p.emailHint;return `<span class="muted">${esc(h||"Contact hidden")}</span> ${reqBtn(u)}`;}
+privSub=function(){if(!db||!me.id||!(isOwner||myMember()))return;
+  const cb=(u,s)=>{G.priv=G.priv||{};if(s.exists)G.priv[u]=s.data();else delete G.priv[u];mergePriv();mergePeopleNow();rerender();};
+  if(canSeeAllContacts()){sub("c:private",db.collection("private"),snap=>{G.priv={};for(const d of rows(snap))G.priv[d._id]=Object.fromEntries(Object.entries(d).filter(([k])=>k!=="_id"));mergePriv();mergePeopleNow();rerender();});
+    sub("c:ppriv",db.collection("peoplepriv"),snap=>{G.ppriv={};for(const d of rows(snap))G.ppriv[d._id]=d;mergePeopleNow();rerender();});return;}
+  const want=new Set([me.id]);for(const r of (G.creqOut||[]))if(r.status==="Allowed")want.add(r.to);
+  for(const g of myGroups())if(((groupById(g)||{}).leads||[]).includes(me.id))for(const u of groupMembers(g))want.add(u);
+  for(const u of want)sub("pv:"+u,db.doc(`private/${u}`),s=>cb(u,s));
+  for(const k of Object.keys(SUBS))if(k.startsWith("pv:")&&!want.has(k.slice(3))){unsub(k);if(G.priv)delete G.priv[k.slice(3)];mergePriv();}};
+function creqSub(){if(!db||!me.id||!(isOwner||myMember()))return;const c=db.collection("contactreq");if(!c.where)return;
+  sub("cr:out",c.where("from","==",me.id),snap=>{G.creqOut=rows(snap);privSub();rerender();});
+  sub("cr:in",c.where("to","==",me.id),snap=>{G.creqIn=rows(snap);rerender();});}
+H8.creq=async t=>{const u=t.dataset.creq;if(!u||u===me.id)return;t.disabled=true;
+  try{await db.doc(`contactreq/${me.id}_${u}`).set({from:me.id,to:u,status:"Pending",at:nowISO()});}catch(e){toast(errMsg(e));t.disabled=false;return;}
+  notify([u],`${who(me.id)} asked to see your contact details`,"Open My Profile → Contact requests to allow or decline.","profile");logAct("requested contact details","contactreq",u,who(u));useBump("creq");
+  G.creqOut=[...(G.creqOut||[]).filter(r=>r.to!==u),{_id:`${me.id}_${u}`,from:me.id,to:u,status:"Pending",at:nowISO()}];
+  const today=(G.creqOut||[]).filter(r=>(r.at||"").slice(0,10)===tISO()).length;if(today===11)raiseFlag("harvest",`${today} contact-detail requests today`,"");
+  toast("Request sent – they'll be asked to allow it");rerender();};
+H8.creqdo=async t=>{const[from,st]=t.dataset.creqdo.split("|");const id=`${from}_${me.id}`;const r=(G.creqIn||[]).find(x=>x._id===id);if(!r)return;
+  try{await db.doc(`contactreq/${id}`).set({...Object.fromEntries(Object.entries(r).filter(([k])=>k!=="_id")),status:st,decidedAt:nowISO()});}catch(e){toast(errMsg(e));return;}
+  if(st==="Allowed")notify([from],`${who(me.id)} shared their contact details with you`,"You can now see their phone and email.","directory");
+  logAct(st==="Allowed"?"allowed contact details":"declined contact details","contactreq",from,who(from));toast(st==="Allowed"?"Shared":"Not shared");};
+function creqCard(){const IN=(G.creqIn||[]).slice().sort((a,b)=>(b.at||"").localeCompare(a.at||""));if(!IN.length)return "";
+  return `<div class="card" style="margin-top:14px"><div class="hd"><h2>${ic("lock")}Contact requests</h2><span class="n">your phone, email and address stay hidden until you allow</span></div><div class="rows">${IN.map(r=>`<div class="ri" style="cursor:default"><div>${avatar(r.from,34)}</div><div style="min-width:0"><div class="t">${esc(who(r.from))}</div><div class="m">${r.status==="Pending"?"Asked "+ago(r.at):r.status==="Allowed"?"Can see your contact details":"You chose not to share"}</div></div><div class="r">${r.status==="Allowed"?`<button class="btn sm ghost" data-creqdo="${esc(r.from)}|Declined">Stop sharing</button>`:r.status==="Pending"?`<button class="btn sm ghost" data-creqdo="${esc(r.from)}|Declined">Decline</button><button class="btn sm pri" data-creqdo="${esc(r.from)}|Allowed">Allow</button>`:`<button class="btn sm ghost" data-creqdo="${esc(r.from)}|Allowed">Share after all</button>`}</div></div>`).join("")}</div></div>`;}
+{const _pp=P.profile;P.profile=()=>_pp()+creqCard();}
+
+// Members & workers register: contact details live in peoplepriv/{id}
+function mergePeople(arr){S._peopleRaw=arr;const all=canSeeAllContacts();return arr.map(x=>{const o={...x};const pv=(G.ppriv||{})[x._id]||(x.uid&&(G.priv||{})[x.uid])||null;
+  if(pv)for(const k of CKEYS)if(!o[k]&&(pv[k]||(k==="address"&&pv.area)))o[k]=pv[k]||pv.area;
+  o._hid=!all&&!pv&&!CKEYS.some(k=>x[k]);return o;});}
+function mergePeopleNow(){if(S._peopleRaw)S.people=mergePeople(S._peopleRaw);}
+{const _sv=save;save=async function(coll,id,data,o){if(coll==="people"&&data){const pub={...data},pv={};for(const k of CKEYS){if(pub[k])pv[k]=pub[k];delete pub[k];}
+    delete pub._hid;if(pv.phone)pub.phoneHint=maskPhone(pv.phone);if(pv.email)pub.emailHint=maskEmail(pv.email);
+    if(Object.keys(pv).length){try{await db.doc(`peoplepriv/${id}`).set({...pv,uid:pub.uid||""},{merge:true});G.ppriv=G.ppriv||{};G.ppriv[id]={...(G.ppriv[id]||{}),...pv};}catch(e){toast(errMsg(e));return false;}}
+    return _sv(coll,id,pub,o);}
+  return _sv(coll,id,data,o);};}
+{const _dl=del;del=async function(coll,id,o){const r=await _dl(coll,id,o);if(r&&coll==="people"){try{await db.doc(`peoplepriv/${id}`).delete();}catch(e){}}return r;};}
+P.directory=()=>PH("Members & workers","users","The church's register of members and workers · contact details stay hidden unless you're allowed to see them",`${ro("repository")}${addBtn("repository","people","Add person",{kind:"Member",status:"Active"})}`)+
+ LT("people",{rows:S.people,sort:"name",coll:"people",mod:"repository",open:x=>`data-open="people|${esc(x._id)}"`,text:x=>[x.name,x.phone,x.email,x.groups,x.address].join(" "),importDefaults:{status:"Active"},
+  cols:[{k:"name",label:"Name",get:x=>x.name||"",html:x=>`<div style="display:flex;gap:10px;align-items:center">${x.uid?avatar(x.uid,30):""}<div style="min-width:0"><div class="t">${esc(x.name)}</div><div class="m">${esc(x.address||(x._hid?"Address hidden":""))}</div></div></div>`},
+   {k:"kind",label:"Type",get:x=>x.kind||""},
+   {k:"phone",label:"Phone",get:x=>x.phone||"",html:x=>x.phone?`${esc(x.phone)} <a class="small" href="${waLink(x.phone)}" target="_blank" rel="noopener">WhatsApp</a>`:x._hid?`<span class="muted">${esc(x.phoneHint||"Hidden")}</span> ${x.uid?reqBtn(x.uid):""}`:`<span class="muted">—</span>`},
+   {k:"groups",label:"Groups",get:x=>x.groups||"",html:x=>String(x.groups||"").split(/\s*,\s*/).filter(Boolean).map(g=>pill(g,"p-info")).join(" ")||`<span class="muted">—</span>`},
+   {k:"bday",label:"Birthday",get:x=>x.bday||"",html:x=>x.bday?esc(fmtBday(x.bday)):`<span class="muted">—</span>`}],
+  filters:[{k:"k",label:"Type",get:x=>x.kind||""},{k:"s",label:"Status",get:x=>x.status||""},{k:"g",label:"Gender",get:x=>x.gender||""},{k:"bm",label:"Birthday month",get:x=>/^\d{2}-/.test(x.bday||"")?MF[Number(x.bday.slice(0,2))-1]:"",opts:MF}],
+  chips:[{k:"",label:"Everyone",test:()=>true},{k:"w",label:"Workers",test:x=>["Worker","Leader","Pastorate"].includes(x.kind)},{k:"m",label:"Members",test:x=>(x.kind||"Member")==="Member"}],emptyT:"No one in the register yet",emptyM:"People are added automatically when their sign-in is approved, or add them here / with Bulk upload."});
+
+// ---------- read receipts ----------
+const SEEN={},SEENAUD={},SEENQ=new Set();let seenT=null;
+function markSeen(key,by){if(!me.id||!db||!dbWritable||by===me.id||!(isOwner||myMember()))return;if(LS.get("seen:"+key,0)||SEENQ.has(key))return;SEENQ.add(key);clearTimeout(seenT);seenT=setTimeout(flushSeen,400);}
+function flushSeen(){for(const k of [...SEENQ])db.doc(`seen/${k}__${me.id}`).set({k,u:me.id,at:nowISO()}).then(()=>{LS.set("seen:"+k,1);SEENQ.delete(k);}).catch(()=>SEENQ.delete(k));}
+function seenOf(key){const c=SEEN[key];if(!c||(!c.busy&&Date.now()-c.t>60000)){SEEN[key]={list:(c&&c.list)||[],t:(c&&c.t)||0,busy:1};const q=db.collection("seen");
+  (q.where?q.where("k","==",key):q).get().then(s=>{SEEN[key]={list:rows(s).filter(r=>r.k===key).map(r=>({u:r.u,at:r.at})),t:Date.now()};rerender();}).catch(()=>{SEEN[key]={list:[],t:Date.now()};});}
+  return (SEEN[key]||{}).list||[];}
+function seenLine(key,aud,by){if(!(by===me.id||isAdminUser()))return "";SEENAUD[key]={aud:[...new Set(aud)].filter(u=>u&&u!==by),by};const L=seenOf(key).filter(r=>r.u!==by);const tot=SEENAUD[key].aud.length;
+  return `<button class="seen" data-seenlist="${esc(key)}">${ic("eye")}Seen by ${L.length}${tot?` of ${tot}`:""}</button>`;}
+H8.seenlist=t=>{const key=t.dataset.seenlist;const A=SEENAUD[key]||{aud:[],by:""};const L=seenOf(key).filter(r=>r.u!==A.by).sort((a,b)=>(b.at||"").localeCompare(a.at||""));const seenSet=new Set(L.map(r=>r.u));const not=A.aud.filter(u=>!seenSet.has(u));
+  sheet({title:"Who has seen this",body:`<div class="small muted">${L.length} of ${A.aud.length||L.length} have seen it. Only you (the sender) and admins can see this list.</div><div class="card"><div class="hd"><h2>Seen</h2><span class="n">${L.length}</span></div><div class="rows">${L.map(r=>`<div class="ri" style="cursor:default"><div>${avatar(r.u,30)}</div><div><div class="t">${esc(who(r.u))}</div><div class="m">${esc(ago(r.at))}</div></div></div>`).join("")||`<div class="empty">No one yet.</div>`}</div></div>${not.length?`<div class="card"><div class="hd"><h2>Not yet</h2><span class="n">${not.length}</span></div><div class="rows">${not.slice(0,300).map(u=>`<div class="ri" style="cursor:default"><div>${avatar(u,30)}</div><div class="t">${esc(who(u))}</div></div>`).join("")}</div></div>`:""}`,foot:`<span style="flex:1"></span><button class="btn ghost" data-close="1">Close</button>`});};
+const noticeAud=x=>{const a=String(x.audience||"Everyone").split(/\s*,\s*/).filter(Boolean);if(!a.length||a.includes("Everyone"))return S.members.map(m=>m._id);return [...new Set(a.flatMap(nm=>{const t=S.teams.find(z=>z.name===nm);return t?groupMembers(t._id):[];}))];};
+const groupAud=g=>[...new Set([...groupMembers(g),...(((groupById(g)||{}).overseers)||[])])];
+
+// welcome posts
+{const _w=P.welcome;P.welcome=()=>{let h=_w();const ps=posts();
+  for(const x of ps){markSeen("f:"+x._id,x.by);const s=seenLine("f:"+x._id,S.members.map(m=>m._id),x.by||"");if(!s)continue;
+    const a=`data-postedit="${esc(x._id)}">Edit</button>`;if(h.includes(a))h=h.replace(a,a+" · "+s);
+    else{const i=h.indexOf(`alt="${esc(x.title||"Post")}"`);void i;}}
+  return h;};}
+// church noticeboard
+P.notices=()=>{const N=visibleNotices().slice().sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||(b.at||"").localeCompare(a.at||""));
+  return PH("Noticeboard","bell","Announcements for the whole church family or a single group",canE("notices")?addBtn("notices","notices","Post a notice"):can("suggestnotice")?btn(`${ic("plus")}Suggest a notice`,'data-suggestnotice="1"',"pri"):"")+
+  `<div class="grid g3">${N.map(x=>{markSeen("n:"+x._id,x.byId);const exp=x.expires&&x.expires<tISO();const txt=`*${x.title}*\n${x.body||""}\n\n— ${settings.churchSub}`;return `<div class="card" style="${exp?"opacity:.6":""}"><div class="hd"><h2>${esc(x.title)}</h2><div class="chips">${x.pinned?pill("Pinned","p-brand"):""}${pill(x.audience||"Everyone","p-info")}${exp?pill("Expired","p-off"):""}</div></div><div class="bd">${imgHTML(x.img,"postimg")}<div style="white-space:pre-wrap">${esc(x.body||"")}</div><div class="small muted" style="margin-top:10px">${x.at?fmtS(x.at.slice(0,10)):""}${x.byId?" · "+esc(who(x.byId)):""} ${seenLine("n:"+x._id,noticeAud(x),x.byId||"")}</div><div class="chips" style="margin-top:10px"><a class="btn sm ghost" href="${waShare(txt)}" target="_blank" rel="noopener">${ic("wa")}Share on WhatsApp</a>${canE("notices")?`<button class="btn sm ghost" data-open="notices|${esc(x._id)}">${ic("edit")}Edit</button>`:""}</div></div></div>`;}).join("")||`<div class="card"><div class="empty"><b>No notices yet</b>${canE("notices")?"Post reminders, schedule changes or words of encouragement for a team or everyone.":"Church notices will appear here."}</div></div>`}</div>`;};
+{const _sn=H8.suggestnotice;H8.suggestnotice=t=>{if(!can("suggestnotice")&&!canE("notices")){toast("Suggesting notices is for Secretariat, group leads and the Pastorate");return;}return _sn(t);};}
+// group notices
+gtNotices=function(g){const t=groupById(g);const lead=isLeadOf(g);const N=gcol(g,"notices").slice().sort((a,b)=>(b.at||"").localeCompare(a.at||""));gsub(g,"notices");
+  return `${lead||isOverseer(g)||canE("notices")?`<div style="margin-bottom:12px">${btn(`${ic("plus")}Post a notice`,`data-gnotice="${esc(g)}"`,"pri")}</div>`:""}<div class="stack">${N.map(x=>{markSeen(`gn:${g}:${x._id}`,x.by);return `<div class="card"><div class="hd"><h2>${esc(x.title||"Notice")}</h2><span class="n">${x.fromG&&x.fromG!==g?"from "+esc(groupName(x.fromG))+" · ":""}${x.role?esc(x.role)+" · ":""}${ago(x.at)}</span></div><div class="bd">${imgHTML(x.img,"postimg")}<div style="white-space:pre-wrap">${esc(x.body||"")}</div><div class="small muted" style="margin-top:8px">${esc(who(x.by))}${(x.by===me.id||lead)?` · <button class="lnk" data-gndel="${esc(g)}|${esc(x._id)}">Delete</button>`:""} ${seenLine(`gn:${g}:${x._id}`,groupAud(g),x.by||"")}</div></div></div>`;}).join("")||`<div class="card"><div class="empty"><b>No notices yet</b>Leads and overseers post notices here; notices from other groups addressed to ${esc(t.name)} also arrive here.</div></div>`}</div>`;};
+// messages & campaigns
+{const _oc=openCampaign;openCampaign=function(id){_oc(id);const c=(S.campaigns||[]).find(x=>x._id===id);if(c)markSeen("c:"+id,c.by);};}
+{const _al=H8.alert;H8.alert=async t=>{const x=INBOX.find(i=>i._id===t.dataset.alert);if(x&&x.page&&x.page.startsWith("campaign:"))markSeen("c:"+x.page.slice(9),x.from);return _al(t);};}
+P.campaigns=()=>PH("Messages & campaigns","announcement","Send a message or flyer to everyone or chosen groups – in the app and on WhatsApp",canE("campaigns")?btn(`${ic("plus")}New message`,'data-campnew="1"',"pri"):"")+
+ LT("campaigns",{rows:S.campaigns||[],sort:"at",dir:"desc",open:c=>`data-campview="${esc(c._id)}"`,text:c=>[c.title,c.body].join(" "),
+  cols:[{k:"at",label:"Sent",get:c=>c.at||"",html:c=>esc(fmtS((c.at||"").slice(0,10)))},{k:"title",label:"Message",get:c=>c.title||"",html:c=>`<div class="t">${c.img?"🖼 ":""}${esc(c.title)}</div><div class="m clamp2">${esc(c.body||"")}</div>`},{k:"aud",label:"To",get:c=>(c.aud||[]).map(groupName).join(", ")},{k:"n",label:"People",num:1,get:c=>n(c.count)},{k:"seen",label:"Seen",nosort:1,get:()=>"",html:c=>seenLine("c:"+c._id,audIds(c.aud||[]),c.by)||`<span class="muted">—</span>`},{k:"by",label:"By",get:c=>who(c.by)}],emptyT:"No messages sent yet"});
+
+// group chat: ticks like WhatsApp
+const CRL={},CRT={};
+function chatMarkRead(g,at){if(!at||!db||document.hidden)return;if((CRL[g]||"")>=at)return;CRL[g]=at;clearTimeout(CRT[g]);CRT[g]=setTimeout(()=>db.doc(`teams/${g}/chatreads/${me.id}`).set({at}).catch(()=>{}),1200);}
+function chatReaders(g){return groupAud(g).filter(u=>u!==me.id);}
+function tickHTML(g,m){const R=chatReaders(g);const rd=gcol(g,"chatreads");const n2=R.filter(u=>((rd.find(r=>r._id===u)||{}).at||"")>=m.at).length;
+  const cls=R.length&&n2>=R.length?"all":n2?"some":"";return `<button class="ticks ${cls}" data-chatseen="${esc(g)}|${esc(m._id)}" aria-label="Read by ${n2} of ${R.length}" title="Read by ${n2} of ${R.length}">${n2?"✓✓":"✓"}</button>`;}
+function chatMsgHTML(g,m,canDel){const mine=m.by===me.id;return `<div class="msg ${mine?"me":""}">${mine?"":avatar(m.by,28)}<div class="bub"><div class="who">${esc(who(m.by))}${m.role?` · ${esc(m.role)}`:""} · ${ago(m.at)}${canDel?` <button class="lnk" data-chatdel="${esc(g)}|${esc(m._id)}" aria-label="Delete message">×</button>`:""}</div>${imgHTML(m.img)}${m.text?`<div class="tx">${esc(m.text)}</div>`:""}${mine?`<div class="tk">${tickHTML(g,m)}</div>`:""}</div></div>`;}
+gtChat=function(g){const t=groupById(g);const lead=isLeadOf(g);gsub(g,"chatreads");const M=gcol(g,"chat").slice().sort((a,b)=>(a.at||"").localeCompare(b.at||"")).slice(-200);const canPost=inGroup(g)||isOverseer(g);
+  const last=M.length?M[M.length-1].at:"";if(canPost||isAdminUser())chatMarkRead(g,last);
+  return `<div class="card"><div class="chat" id="chatBox">${M.map(m=>chatMsgHTML(g,m,m.by===me.id||lead)).join("")||`<div class="empty"><b>No messages yet</b>Say hello – only ${esc(t.name)} members${(t.overseers||[]).length?" and its overseers":""} can read this.</div>`}</div>
+   ${canPost?`<div id="stg_chat">${stagedHTML("chat")}</div><form class="chatin" id="chatForm">${attachBtn("chat")}<input class="in" id="chatTx" placeholder="Message ${esc(t.name)}…" autocomplete="off" maxlength="2000"><button class="btn pri" type="submit">Send</button></form>`:""}</div>`;};
+H8.chatseen=t=>{const[g,id]=t.dataset.chatseen.split("|");const m=gcol(g,"chat").find(x=>x._id===id);if(!m)return;const R=chatReaders(g);const rd=gcol(g,"chatreads");
+  const yes=R.filter(u=>((rd.find(r=>r._id===u)||{}).at||"")>=m.at),no=R.filter(u=>!yes.includes(u));
+  sheet({title:"Message info",body:`<div class="small muted clamp2">${esc(m.text||"Picture")}</div><div class="card"><div class="hd"><h2>Read by</h2><span class="n">${yes.length} of ${R.length}</span></div><div class="rows">${yes.map(u=>`<div class="ri" style="cursor:default"><div>${avatar(u,30)}</div><div class="t">${esc(who(u))}</div></div>`).join("")||`<div class="empty">No one yet.</div>`}</div></div>${no.length?`<div class="card"><div class="hd"><h2>Not read yet</h2><span class="n">${no.length}</span></div><div class="rows">${no.map(u=>`<div class="ri" style="cursor:default"><div>${avatar(u,30)}</div><div class="t">${esc(who(u))}</div></div>`).join("")}</div></div>`:""}`,foot:`<span style="flex:1"></span><button class="btn ghost" data-close="1">Close</button>`});};
+
+// ---------- sounds: send swoosh, incoming chat pop ----------
+function soundOK(){return LS.get("sound",1)&&actx;}
+function whoosh(){if(!soundOK())return;try{const t0=actx.currentTime,len=.32,b=actx.createBuffer(1,Math.floor(actx.sampleRate*len),actx.sampleRate),d=b.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);
+  const s=actx.createBufferSource(),f=actx.createBiquadFilter(),g=actx.createGain();s.buffer=b;f.type="bandpass";f.Q.value=1.2;f.frequency.setValueAtTime(500,t0);f.frequency.exponentialRampToValueAtTime(3200,t0+len);
+  g.gain.setValueAtTime(0,t0);g.gain.linearRampToValueAtTime(.22,t0+.04);g.gain.exponentialRampToValueAtTime(.001,t0+len);s.connect(f).connect(g).connect(actx.destination);s.start(t0);s.stop(t0+len);}catch(e){}}
+function popIn(){if(!soundOK())return;try{const t0=actx.currentTime;[[660,0],[990,.09]].forEach(([fq,dl])=>{const o=actx.createOscillator(),g=actx.createGain();o.type="triangle";o.frequency.value=fq;g.gain.setValueAtTime(0,t0+dl);g.gain.linearRampToValueAtTime(.2,t0+dl+.015);g.gain.exponentialRampToValueAtTime(.001,t0+dl+.22);o.connect(g).connect(actx.destination);o.start(t0+dl);o.stop(t0+dl+.25);});}catch(e){}}
+const CHL={};
+function chatWatch(){if(!db||!me.id||!(isOwner||myMember()))return;const gs=new Set([...myGroups(),...S.teams.filter(t=>isOverseer(t._id)).map(t=>t._id)]);
+  for(const g of gs){const c=db.collection(`teams/${g}/chat`);if(!c.orderBy)continue;sub(`chl:${g}`,c.orderBy("at","desc").limit(1),snap=>{const r=rows(snap)[0];if(!r)return;const prev=CHL[g];CHL[g]=r.at;
+    if(prev&&r.at>prev&&r.by!==me.id){popIn();if(!(route.page==="mygroups"&&route.param===g))toast(`💬 ${who(r.by)} in ${groupName(g)}`);}});}}
+// scam-message check on anything sent to many people
+const SCAM_RE=/\b\d{10}\b|transfer|send (me )?money|pay (in)?to|account (number|no)|acct|urgent|bvn|\botp\b|\bpin\b|opay|palmpay|moniepoint|kuda|gtb|gtbank|zenith|access bank|first ?bank|\buba\b|wema|fidelity|sterling|union bank|polaris|keystone|stanbic|fcmb|ecobank/gi;
+function scamScore(t){const m=String(t||"").toLowerCase().match(SCAM_RE)||[];const set=new Set(m.map(x=>/^\d{10}$/.test(x)?"#acct":x));return {n:set.size,acct:set.has("#acct"),hits:[...set]};}
+const isScammy=t=>{const s=scamScore(t);return (s.acct&&s.n>=2)||s.n>=3;};
+async function raiseFlag(kind,title,text,extra={}){if(!db||!me.id)return;try{await db.collection("flags").add({kind,title,text:String(text||"").slice(0,400),by:me.id,at:nowISO(),...extra});}catch(e){}
+  notify(saUsers(),`⚠ ${title}`,`${who(me.id)}${text?": "+String(text).slice(0,140):""}`,"monitor");}
+{const _ad=addDoc;addDoc=async function(path,data){const ok=await _ad(path,data);if(ok&&/\/(chat|notices|msgs)$/.test(path)){whoosh();const tx=[data.text,data.title,data.body].filter(Boolean).join(" ");if(isScammy(tx))raiseFlag("scam",`Possible scam message (${path.split("/").slice(-1)[0]})`,tx,{where:path});}return ok;};}
+{const _sv=save;save=async function(coll,id,data,o){const isNew=!store(coll).some(r=>r._id===id);const ok=await _sv(coll,id,data,o);
+  if(ok&&isNew&&["notices","feed","campaigns"].includes(coll)){whoosh();const tx=[data.title,data.body,data.caption].filter(Boolean).join(" ");if(isScammy(tx))raiseFlag("scam",`Possible scam message (${coll})`,tx,{where:coll});}return ok;};}
+
+// ---------- view means view: no action buttons without permission ----------
+{const _po=pageOK;pageOK=function(pg){if(pg[3]==="_sa")return isSA();return _po(pg);};}
+
+// ================= HOH Family v10: Super Admin, maker–checker for admins, Activity Monitor =================
+{const st=AREAS.find(a=>a.k==="settings");const i=st.pages.findIndex(p=>p[0]==="log");st.pages.splice(i,0,["monitor","Activity Monitor","radar","_sa","Security & data"]);}
+APPROVE_TYPES.sa="Super Admin approval";
+const saUsers=()=>[...new Set(usersWithRole("super-admin"))];
+const SA_SENS=["admin","super-admin"];
+const finRoles=()=>(((settings.perm||{}).w||{}).finance||[]).filter(r=>r!=="member");
+function needsSA(oldR,newR){const o=new Set(oldR||[]),nw=new Set(newR||[]);const add=[...nw].filter(r=>!o.has(r)),rem=[...o].filter(r=>!nw.has(r));
+  return add.some(r=>SA_SENS.includes(r)||finRoles().includes(r))||rem.some(r=>SA_SENS.includes(r));}
+const roleLabel=r=>r==="super-admin"?"Super Admin":r==="admin"?"Admin":groupName(r);
+function roleDiffText(o,nw){const a=(nw||[]).filter(r=>!(o||[]).includes(r)&&r!=="member"),b=(o||[]).filter(r=>!(nw||[]).includes(r)&&r!=="member");return [a.length?"Add: "+a.map(roleLabel).join(", "):"",b.length?"Remove: "+b.map(roleLabel).join(", "):""].filter(Boolean).join("\n");}
+const FLD=k=>({amount:"Amount",date:"Date",type:"Type",cat:"Category",note:"Note",desc:"Description",item:"Item",uid:"Person"}[k]||k);
+function diffText(a,b){a=a||{};b=b||{};const ks=[...new Set([...Object.keys(a),...Object.keys(b)])].filter(k=>!k.startsWith("_")&&!["at","by"].includes(k));
+  const ch=ks.filter(k=>String(a[k]??"")!==String(b[k]??""));return ch.length?ch.map(k=>`${FLD(k)}: ${a[k]??"—"} → ${b[k]??"—"}`).join("\n"):"No visible change";}
+function recText(r){r=r||{};return ["amount","type","cat","date","note","desc","item"].filter(k=>r[k]!=null&&r[k]!=="").map(k=>`${FLD(k)}: ${k==="amount"?naira(r[k]):r[k]}`).join(" · ")||"(record)";}
+async function saRequest(kind,title,payload,body=""){
+  const d={type:"sa",kind,title,body,payload:payload||{},makerId:me.id,at:nowISO(),status:"Pending"};
+  try{await db.collection("queues/super-admin/items").add(d);}catch(e){toast(errMsg(e));return false;}
+  notify(saUsers(),`Super Admin approval needed: ${title}`,`${who(me.id)} asked for approval.${body?"\n"+body.slice(0,160):""}`,"approvals");
+  logAct("sent for Super Admin approval","sa",kind,title);toast("Sent to Super Admin for approval");return true;}
+const SA_PATH=/^teams\/[^/]+\/(finance|duespay)$/;
+const finLabel=coll=>`${coll.endsWith("finance")?"finance entry":"dues payment"} · ${groupName(coll.split("/")[1])}`;
+
+// ---------- risky actions by admins/officers go to the Super Admin ----------
+{const _sv=save;save=async function(coll,id,data,o={}){
+  if(!isSA()&&coll==="members"&&data){const old=S.members.find(m=>m._id===id);const oldR=old?(old.rid||[]):[];const newR=data.rid||oldR;
+    if(needsSA(oldR,newR)){const safe=old?oldR:newR.filter(r=>!SA_SENS.includes(r)&&!finRoles().includes(r));const ok=await _sv(coll,id,{...data,rid:safe},{...o,quiet:true});
+      await saRequest("roles",`Change roles for ${who(id)}`,{u:id,rid:newR},roleDiffText(oldR,newR));return ok;}
+    if(old&&!!data.suspended!==!!old.suspended){toast("Only a Super Admin can suspend or restore access");return false;}}
+  if(!isSA()&&SA_PATH.test(coll)&&store(coll).some(r=>r._id===id)){const old=store(coll).find(r=>r._id===id);const d={...data};delete d._id;
+    return saRequest("edit",`Change a saved ${finLabel(coll)}`,{path:`${coll}/${id}`,data:d},diffText(old,d));}
+  return _sv(coll,id,data,o);};}
+{const _dl=del;del=async function(coll,id,o){
+  if(!isSA()){if(SA_PATH.test(coll))return saRequest("delete",`Delete a saved ${finLabel(coll)}`,{paths:[`${coll}/${id}`]},recText(store(coll).find(r=>r._id===id)));
+    if(coll==="members")return saRequest("remove",`Remove ${who(id)} from the app`,{u:id},"They will lose access to HOH Family.");
+    if(coll==="teams")return saRequest("delete",`Delete the group ${groupName(id)}`,{paths:[`teams/${id}`]},"The group and its page will be removed.");}
+  return _dl(coll,id,o);};}
+{const _dd=delDoc;delDoc=async function(path){const i=path.lastIndexOf("/");const coll=path.slice(0,i);
+  if(!isSA()&&SA_PATH.test(coll))return saRequest("delete",`Delete a saved ${finLabel(coll)}`,{paths:[path]},recText(store(coll).find(r=>r._id===path.slice(i+1))));
+  return _dd(path);};}
+{const _bd=bulkDelete;bulkDelete=async function(key){const cfg=LCFG[key];const ids=[...(LSEL[key]||[])];if(isSA()||ids.length<=10)return _bd(key);
+  if(!confirmArm("bd"+key)){toast(`Tap Delete again – removing ${ids.length} records needs Super Admin approval`);return;}
+  const lab=id=>{const r=cfg.rows.find(x=>x._id===id)||{};try{return labelOf(cfg.coll,r)||id;}catch(e){return id;}};
+  await saRequest("delete",`Delete ${ids.length} records (${(schemaOf(cfg)||{}).name||cfg.coll})`,{paths:ids.map(id=>`${cfg.coll}/${id}`)},ids.slice(0,25).map(lab).join("\n")+(ids.length>25?`\n…and ${ids.length-25} more`:""));
+  LSEL[key].clear();render();};}
+{const _sr=H8.secreset;H8.secreset=async t=>{if(isSA())return _sr(t);const u=t.dataset.secreset;if(!confirmArm("sr"+u)){t.textContent="Tap again to ask for a reset";return;}await saRequest("secreset",`Reset security questions for ${who(u)}`,{u},"Resetting someone's security questions is a common first step in taking over an account – check with the person first.");};}
+{const _ss=saveSettings;saveSettings=async function(patch,msg){if(isSA())return _ss(patch,msg);const p={...patch};delete p.perm;delete p.hier;delete p.hierInit;
+  if("access2" in p){const a2=p.access2;delete p.access2;const ch=[];for(const m of new Set([...Object.keys(a2||{}),...Object.keys(settings.access2||{})]))for(const r of new Set([...Object.keys((a2||{})[m]||{}),...Object.keys((settings.access2||{})[m]||{})])){const x=accessLvl(m,r),y=((a2||{})[m]||{})[r]??defLvl(m,r);if(Number(x)!==Number(y))ch.push(`${groupName(r)} · ${(MODDEF[m]||[m])[0]}: ${["None","View","Edit"][x]} → ${["None","View","Edit"][y]}`);}
+    if(ch.length)await saRequest("perm","Change permissions",{access2:a2},ch.slice(0,30).join("\n"));else toast("Nothing changed");}
+  if("approvers" in p){const ap=p.approvers;delete p.approvers;await saRequest("approvers","Change who approves",{approvers:ap},Object.entries(ap||{}).filter(([k,v])=>(settings.approvers||{})[k]!==v).map(([k,v])=>`${k}: ${groupName((settings.approvers||{})[k]||"admin")} → ${groupName(v)}`).join("\n"));}
+  if(Object.keys(p).length)return _ss(p,msg);};}
+{const _ex=exportXlsx;exportXlsx=function(){if(!isSA()){toast("Downloading everything is for Super Admins");return;}logAct("downloaded everything","export","all","Excel");return _ex();};}
+const EXPORT_SENS=cfg=>cfg&&(cfg.coll==="people"||(cfg.cols||[]).some(c=>CKEYS.includes(c.k)));
+function exportGrant(key){const used=LS.get("expUsed",[]);return (QUEUES["super-admin"]||[]).find(x=>x.kind==="export"&&x.makerId===me.id&&(x.payload||{}).key===key&&x.status==="Approved"&&!used.includes(x._id)&&Date.now()-new Date(x.checkedAt||0)<864e5);}
+{const _lc=lcsv;lcsv=function(key,only){if(!can("export")){toast("You don't have permission to download lists");return;}const cfg=LCFG[key];
+  if(!isSA()&&EXPORT_SENS(cfg)){const g=exportGrant(key);if(!g){if(!confirmArm("ex"+key)){toast("This list has contact details – tap Export again to ask the Super Admin");return;}saRequest("export",`Download the ${(schemaOf(cfg)||{}).name||key} list (has contact details)`,{key},"");return;}LS.set("expUsed",[...LS.get("expUsed",[]),g._id]);}
+  logAct("exported list","export",key,`${key}${only?" (selected rows)":""}`);useBump("exp");if(USE&&USE.exp===4)raiseFlag("export","4 list downloads today","");return _lc(key,only);};}
+H8.saexport=t=>{const x=(QUEUES["super-admin"]||[]).find(i=>i._id===t.dataset.saexport);if(!x)return;const key=(x.payload||{}).key;if(!LCFG[key]){LS.set("pendExp",x._id);toast("Open that list, then press Export – it's approved for 24 hours");return;}lcsv(key);};
+
+// ---------- Super Admin decisions ----------
+async function applySA(x){const p=x.payload||{};
+  switch(x.kind){
+    case "roles":{const m=S.members.find(z=>z._id===p.u);if(!m){toast("That person is no longer a member");return false;}const d={...m,rid:p.rid};delete d._id;return save("members",p.u,d,{quiet:true});}
+    case "perm":await saveSettings({access2:p.access2||{}});accDraft2=null;return true;
+    case "approvers":await saveSettings({approvers:p.approvers||{}});return true;
+    case "secreset":if(!await delDoc(`secq/${p.u}`))return false;notify([p.u],"Your security questions were reset","Choose new ones the next time you open HOH Family.","profile");logAct("reset security questions","secq",p.u,who(p.u));return true;
+    case "edit":return setDoc(p.path,p.data||{});
+    case "delete":{let c=0;for(const path of (p.paths||[])){const i=path.lastIndexOf("/");const coll=path.slice(0,i),id=path.slice(i+1);if(coll==="teams"||coll==="people"||coll==="members"?await del(coll,id,{quiet:true}):await delDoc(path))c++;}toast(`${c} removed`);return c>0||!(p.paths||[]).length;}
+    case "remove":return del("members",p.u,{quiet:true});
+    case "export":return true;}
+  return true;}
+{const _dq=decideQueue;decideQueue=async function(q,id,st,note=""){if(q!=="super-admin")return _dq(q,id,st,note);
+  const x=(QUEUES[q]||[]).find(i=>i._id===id);if(!x||!isSA()||x.makerId===me.id||x.status!=="Pending")return false;
+  if(st==="Approved"&&!await applySA(x))return false;
+  const d={...x,status:st,checkerId:me.id,checkedAt:nowISO(),note};delete d._id;delete d.queue;
+  if(!await setDoc(`queues/${q}/items/${id}`,d))return false;
+  notify([x.makerId],`${st}: ${x.title}`,note||`${who(me.id)} (Super Admin) ${st.toLowerCase()} your request.`,"approvals");logAct(`${st.toLowerCase()} (Super Admin)`,"sa",id,x.title);return true;};}
+{const _ai=approvalItems;approvalItems=function(){return _ai().map(i=>i.kind==="q"&&i.x&&i.x.type==="sa"?{...i,sub:`Needs Super Admin · ${i.x.kind==="edit"||i.x.kind==="delete"?"protected record":i.x.kind==="perm"?"permissions":i.x.kind==="roles"?"roles":i.x.kind==="secreset"?"security":i.x.kind==="export"?"download":"access"}`}:i);};}
+H8.saview=t=>{const x=(QUEUES["super-admin"]||[]).find(i=>i._id===t.dataset.saview);if(!x)return;
+  sheet({title:x.title,body:`<div class="small muted">From ${esc(who(x.makerId))} · ${esc(ago(x.at))}</div><div class="card"><div class="hd"><h2>What will change</h2></div><div class="bd" style="white-space:pre-wrap">${esc(x.body||"See the title above.")}</div></div><div class="small muted">Approving applies the change straight away. Declining leaves everything as it is.</div>`,
+   foot:`<span style="flex:1"></span><button class="btn ghost" data-close="1">Close</button>${x.status==="Pending"&&isSA()&&x.makerId!==me.id?`<button class="btn ghost" data-ap1="q|super-admin|${esc(x._id)}|no">Decline</button><button class="btn pri" data-ap1="q|super-admin|${esc(x._id)}|yes">Approve</button>`:""}`});};
+{const _ap=P.approvals;P.approvals=()=>{let h=_ap();h=h.replace(/<button class="btn sm ghost" data-ap1="q\|super-admin\|([^|"]+)\|no">/g,(m,id)=>`<button class="btn sm ghost" data-saview="${id}">Details</button>`+m);
+  if(!isSA()){const M=(QUEUES["super-admin"]||[]).filter(x=>x.makerId===me.id).sort((a,b)=>(b.at||"").localeCompare(a.at||"")).slice(0,20);
+    if(M.length)h=h.replace('<div class="chips" style="margin-bottom:12px">',`<div class="card" style="margin-bottom:14px"><div class="hd"><h2>${ic("shield")}Sent to the Super Admin</h2><span class="n">risky changes wait for approval</span></div><div class="rows">${M.map(x=>`<div class="ri" style="cursor:default"><div>${ic("shield")}</div><div style="min-width:0"><div class="t">${esc(x.title)}</div><div class="m">${esc(ago(x.at))}${x.note?" · "+esc(x.note):""}</div></div><div class="r">${epill(x.status==="Pending"?"Pending":x.status)}${x.kind==="export"&&exportGrant((x.payload||{}).key)&&x._id===exportGrant((x.payload||{}).key)._id?`<button class="btn sm pri" data-saexport="${esc(x._id)}">${ic("dl")}Download</button>`:""}<button class="btn sm ghost" data-saview="${esc(x._id)}">Details</button></div></div>`).join("")}</div></div><div class="chips" style="margin-bottom:12px">`);}
+  return h;};}
+
+// ---------- People & Sign-ins: Super Admin and suspension ----------
+{const _pe=H8.paedit;H8.paedit=t=>{_pe(t);const u=t.dataset.paedit;const m=S.members.find(x=>x._id===u)||{};const isOwn=u===settings.ownerUid;const adm=document.getElementById("paAdm");
+  if(adm&&isSA()){adm.closest("label").insertAdjacentHTML("afterend",`<label class="chk wide"><input type="checkbox" id="paSA" ${(m.rid||[]).includes("super-admin")||isOwn?"checked":""} ${isOwn?"disabled":""}> Super Admin – manages critical settings and approves admins' risky changes</label>`);
+    const sv=document.getElementById("paSave");const orig=sv.onclick;sv.onclick=async e=>{const want=document.getElementById("paSA").checked;const mm=S.members.find(x=>x._id===u);if(mm&&!isOwn){const r=(mm.rid||["member"]).filter(x=>x!=="super-admin");if(want)r.push("super-admin");mm.rid=r;}return orig(e);};
+    if(!isOwn&&u!==me.id){const f=document.querySelector(".sheet footer");f.insertAdjacentHTML("afterbegin",`<button class="btn ${m.suspended?"pri":"ghost"}" data-suspend="${esc(u)}|${m.suspended?0:1}">${ic("lock")}${m.suspended?"Restore access":"Suspend"}</button>`);}}
+  else if(adm&&!isSA())adm.closest("label").insertAdjacentHTML("afterend",`<div class="small muted wide">Changing Admin, Super Admin or finance roles is sent to the Super Admin for approval.</div>`);
+  if(m.suspended){const b=document.querySelector(".sheet .body");if(b)b.insertAdjacentHTML("afterbegin",`<div class="pill p-crit" style="align-self:flex-start">Suspended ${m.suspendedAt?ago(m.suspendedAt):""}</div>`);}};}
+H8.suspend=async t=>{const[u,on]=t.dataset.suspend.split("|");if(!isSA()||u===settings.ownerUid||u===me.id)return;const m=S.members.find(x=>x._id===u);if(!m)return;
+  if(on==="1"&&!confirmArm("sus"+u)){t.textContent="Tap again to suspend";return;}
+  const d={...m,suspended:on==="1",suspendedBy:me.id,suspendedAt:nowISO()};delete d._id;if(!await save("members",u,d,{quiet:true}))return;
+  if(on==="1"){try{window.HOH_WEB&&window.HOH_WEB.revokeSession&&await window.HOH_WEB.revokeSession(u,"");}catch(e){}notify([u],"Your access to HOH Family is paused","Please speak with a church admin.","");}
+  else notify([u],"Your access to HOH Family is restored","Welcome back.","welcome");
+  logAct(on==="1"?"suspended access":"restored access","members",u,who(u));toast(on==="1"?"Suspended – they've been signed out":"Access restored");closeLayer();render();};
+{const _r=render;render=function(){const mm=me.id&&S.members.find(x=>x._id===me.id);if(mm&&mm.suspended&&!isOwner){navHTML();const el=document.getElementById("main");el.__html=null;
+    el.innerHTML=`<div class="boot"><div class="card" style="max-width:460px"><div class="bd stack" style="text-align:center"><img src="${LOGO}" alt="" style="margin:0 auto"><h2 style="margin:0">Your access is paused</h2><p class="muted" style="margin:0">A Super Admin has paused your access to ${esc(FAMILY)}. If you think this is a mistake, please speak with a church admin.</p>${window.HOH_WEB?`<button class="btn ghost" id="signOut3" style="align-self:center">Sign out</button>`:""}</div></div></div>`;
+    const s3=document.getElementById("signOut3");if(s3)s3.onclick=()=>window.HOH_WEB.signOut();return;}
+  return _r();};}
+
+// ---------- security answers: alert after more than 2 wrong tries ----------
+{const _sc=H8.seccheck;H8.seccheck=async t=>{const b=n(LS.get("secfail:"+me.id,0));await _sc(t);const a=n(LS.get("secfail:"+me.id,0));if(a>b&&a===3)raiseFlag("secfail","3 wrong security answers",`on ${devLabel()}`);};}
+
+// ---------- usage counters (saved in small batches) ----------
+let USE=null,useDirty=false,lastPg="";
+function useBump(kind,page){if(!me.id)return;const k="use:"+tISO();if(!USE||USE._k!==k)USE=LS.get(k,null)||{_k:k,v:{},h:{},n:0,creq:0,exp:0};
+  if(kind==="view"){const p=String(page||"?").replace(/[^A-Za-z0-9_-]/g,"").slice(0,40)||"page";USE.v[p]=(USE.v[p]||0)+1;const hh=String(new Date().getHours());USE.h[hh]=(USE.h[hh]||0)+1;USE.n++;}else USE[kind]=(USE[kind]||0)+1;
+  LS.set(k,USE);useDirty=true;}
+function useFlush(){if(!useDirty||!USE||!db||!me.id||!dbWritable||!(isOwner||myMember()))return;useDirty=false;const date=USE._k.slice(4);
+  db.doc(`usage/${me.id}_${date}_${String(DEVID).replace(/[^A-Za-z0-9]/g,"").slice(0,24)}`).set({uid:me.id,date,dev:DEVID,v:USE.v,h:USE.h,n:USE.n,creq:USE.creq||0,exp:USE.exp||0,last:nowISO()}).catch(()=>{});}
+setInterval(()=>{if(!me.id||!(isOwner||myMember()))return;const pg=route.page+(route.param?":"+route.param:"");if(pg!==lastPg){lastPg=pg;useBump("view",route.page);}},2500);
+setInterval(useFlush,180000);document.addEventListener("visibilitychange",()=>{if(document.hidden)useFlush();});window.addEventListener("pagehide",useFlush);
+
+// ---------- boot: subscriptions, owner upgrade, one-off moves ----------
+let v10Mig=false;
+{const _sf=syncFamily;syncFamily=function(){_sf();try{creqSub();chatWatch();privSub();
+  if(isAdminUser()&&!isSA()&&db&&me.id){const c=db.collection("queues/super-admin/items");if(c.where)sub("q:sa-mine",c.where("makerId","==",me.id),snap=>{QUEUES["super-admin"]=rows(snap).map(x=>({...x,queue:"super-admin"}));rerender();});}
+  if(isOwner&&dbWritable&&myMember()&&!(myMember().rid||[]).includes("super-admin")&&!window.__saUp){window.__saUp=1;const m=myMember();const d={...m,rid:[...new Set([...(m.rid||[]),"admin","super-admin"])]};delete d._id;save("members",me.id,d,{quiet:true,log:false});}
+  if(isSA()&&dbWritable&&!v10Mig&&(loaded&1)&&!needsOnboarding()){v10Mig=true;setTimeout(v10Migrate,6000);}}catch(e){}};}
+async function v10Migrate(){if(!isSA())return;let a=0,b=0;
+  for(const x of (S._peopleRaw||[]))if(CKEYS.some(k=>x[k])){const d={...x};delete d._id;delete d._hid;if(await save("people",x._id,d,{quiet:true,log:false}))a++;}
+  for(const p of (S._profRaw||[])){const pv=(G.priv||{})[p._id];if(!pv||(!pv.phone&&!pv.email)||(p.phoneHint||!pv.phone)&&(p.emailHint||!pv.email))continue;const d={...p};delete d._id;if(pv.phone)d.phoneHint=maskPhone(pv.phone);if(pv.email)d.emailHint=maskEmail(pv.email);if(await _rawSetDoc(`profiles/${p._id}`,d))b++;}
+  if(a||b)logAct("protected contact details","private","",`${a} register records, ${b} profiles`);}
+
+// ================= HOH Family v10: Activity Monitor (Super Admins) =================
+const MON={loaded:0,busy:false,usage:[],lf:[],flags:[],chat:[],fin:[],scanned:{chat:0,fin:0}};
+const median=a=>{if(!a.length)return 0;const s=[...a].sort((x,y)=>x-y);return s[Math.floor(s.length/2)];};
+const riskOf=s=>s>=50?["High","p-crit"]:s>=25?["Medium","p-warn"]:["Low","p-ok"];
+async function monLoad(force){if(!isSA()||!db||MON.busy||(MON.loaded&&!force&&Date.now()-MON.loaded<120000))return;MON.busy=true;
+  const cut=iso(addD(today(),-30));const get=async(c,f)=>{try{let q=db.collection(c);if(f&&q.where)q=q.where(...f);return rows(await q.get());}catch(e){return [];}};
+  const[u,lf,fl]=await Promise.all([get("usage",["date",">=",cut]),get("loginfails"),get("flags",["at",">=",cut+"T"])]);
+  MON.usage=u.filter(x=>(x.date||"")>=cut);MON.lf=lf;MON.flags=fl.filter(x=>(x.at||"")>=cut);MON.loaded=Date.now();MON.busy=false;rerender();}
+function monCompute(){const A=[];const now=Date.now(),day=864e5;const add=(uid,key,pts,title,why,at,kind)=>A.push({uid:uid||"",key:String(key).replace(/\//g,"_").slice(0,300),pts,title,why,at:at||"",kind});
+  const emailUid={};for(const m of S.members){const e=String(prof(m._id).email||"").toLowerCase();if(e)emailUid[e]=m._id;}
+  const sess=G.allsess||[];
+  for(const f of MON.lf){if(!f.last||now-Date.parse(f.last)>7*day||((f.count||0)<=2&&!f.alerted))continue;const uid=emailUid[String(f.email||"").toLowerCase()]||"";const st=f.windowStart||f.last;
+    const after=uid&&sess.some(s=>s.uid===uid&&s.last&&Date.parse(s.last)>Date.parse(st));
+    add(uid,`lf:${f._id}:${st.slice(0,13)}`,after?45:30,`${Math.max(f.count||0,3)} failed sign-in attempts${after?" – then a successful sign-in":""}`,`Someone tried to sign in as ${f.email} ${f.count||3} times within an hour${f.city?` from ${f.city}${f.country?", "+f.country:""}`:""}${f.ip?` (IP ${f.ip})`:""}.${uid?"":" This isn't a member's email."}`,f.last,"signin");}
+  const FP={secfail:[25,"security"],scam:[25,"message"],harvest:[20,"data"],export:[15,"data"]};
+  for(const f of MON.flags){const[p,k]=FP[f.kind]||[10,"other"];add(f.by,`fl:${f._id}`,p,f.title||f.kind,f.text||"",f.at,k);}
+  const byUid={};for(const s of sess)(byUid[s.uid]=byUid[s.uid]||[]).push(s);
+  for(const[u,L]of Object.entries(byUid)){const older=L.filter(s=>s.first&&now-Date.parse(s.first)>=7*day);
+    for(const s of L.filter(s=>s.first&&now-Date.parse(s.first)<7*day)){if(older.length)add(u,`nd:${s._id}`,10,"Signed in on a new device",`${s.label||"A device"}${s.city?` in ${s.city}`:""} – first seen ${ago(s.first)}.`,s.first,"signin");
+      const cs=new Set(older.map(x=>x.country).filter(Boolean));if(s.country&&cs.size&&!cs.has(s.country))add(u,`nc:${s._id}`,20,"Sign-in from a new country",`${s.city||""} ${s.country} – usually ${[...cs].join(", ")}.`,s.first,"signin");}}
+  const byDev={};for(const s of sess)if(s.deviceId)(byDev[s.deviceId]=byDev[s.deviceId]||new Set()).add(s.uid);
+  for(const[d,set]of Object.entries(byDev))if(set.size>1)for(const u of set)add(u,`sd:${d}:${u}`,15,"One phone used by several accounts",`The same device was used by ${[...set].map(who).join(", ")}.`,"","signin");
+  const U={};for(const r of MON.usage)(U[r.uid]=U[r.uid]||[]).push(r);
+  const d7=iso(addD(today(),-7));const tot7=Object.fromEntries(Object.entries(U).map(([u,L])=>[u,L.filter(r=>r.date>=d7).reduce((s,r)=>s+n(r.n),0)]));const med=median(Object.values(tot7).filter(x=>x>0));
+  const night=L=>L.reduce((s,r)=>s+[0,1,2,3,4].reduce((a,h)=>a+n((r.h||{})[h]),0),0),all=L=>L.reduce((s,r)=>s+n(r.n),0);
+  for(const[u,L]of Object.entries(U)){const rec=L.filter(r=>r.date>=d7),old=L.filter(r=>r.date<d7);const nr=night(rec),ar=all(rec),no=night(old),ao=all(old);
+    if(nr>=3&&ao>=20&&no/ao<.1)add(u,`nt:${u}:${d7}`,10,"Using the app between midnight and 5am",`${nr} page views late at night this week – unusual for them.`,"","pattern");
+    const s0=(byUid[u]||[]).map(s=>s.first).filter(Boolean).sort()[0];
+    if(rec.length&&!old.length&&s0&&now-Date.parse(s0)>30*day&&ar>Math.max(40,2*med))add(u,`dm:${u}:${d7}`,15,"Quiet account suddenly very busy",`No use for weeks, then ${ar} page views this week (church average ${Math.round(med)}).`,"","pattern");
+    const daily={},creq={},ex={};for(const r of L){const v=r.v||{};daily[r.date]=(daily[r.date]||0)+n(v.directory)+n(v.peopleadmin)+n(v.followup);creq[r.date]=(creq[r.date]||0)+n(r.creq);ex[r.date]=(ex[r.date]||0)+n(r.exp);}
+    const vals=Object.values(daily);const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+    for(const[d,c]of Object.entries(daily))if(d>=d7&&c>Math.max(30,5*avg))add(u,`hb:${u}:${d}`,15,"Browsing people's records far more than usual",`${c} visits to member lists on ${fmtS(d)} (usually about ${Math.round(avg)}).`,d,"data");
+    for(const[d,c]of Object.entries(creq))if(c>10)add(u,`cr:${u}:${d}`,20,"Many contact-detail requests",`${c} requests on ${fmtS(d)}.`,d,"data");
+    for(const[d,c]of Object.entries(ex))if(c>3)add(u,`ex:${u}:${d}`,15,"Many list downloads",`${c} downloads on ${fmtS(d)}.`,d,"data");}
+  const cut7=new Date(now-7*day).toISOString();const delBy={};for(const a of S.activity||[]){if((a.at||"")<cut7||!/delet/i.test(a.act||""))continue;const k=a.by+"|"+a.at.slice(0,10);delBy[k]=(delBy[k]||0)+(/bulk/i.test(a.act)?parseInt(a.label)||10:1);}
+  for(const[k,c]of Object.entries(delBy))if(c>10){const[u,d]=k.split("|");add(u,`dl:${k}`,20,"Many records deleted",`${c} deletions on ${fmtS(d)}.`,d,"power");}
+  const camp={};for(const c of S.campaigns||[]){const k=c.by+"|"+(c.at||"").slice(0,10);camp[k]=(camp[k]||0)+1;}for(const[k,c]of Object.entries(camp))if(c>5){const[u,d]=k.split("|");add(u,`cp:${k}`,10,"Many mass messages in one day",`${c} messages on ${fmtS(d)}.`,d,"message");}
+  for(const x of QUEUES["super-admin"]||[]){if(now-Date.parse(x.at||0)>30*day)continue;const ps=(x.payload||{}).paths||[];
+    if(x.kind==="edit"||(x.kind==="delete"&&ps.some(p=>/\/(finance|duespay)\//.test(p))))add(x.makerId,`sq:${x._id}`,10,"Asked to change a saved money record",x.title+(x.body?" – "+x.body.split("\n")[0]:""),x.at,"money");
+    else if(["roles","perm","approvers","secreset","remove"].includes(x.kind))add(x.makerId,`sq:${x._id}`,5,"Asked to change access or security",x.title,x.at,"power");}
+  for(const c of MON.chat)add(c.by,`ch:${c.path}:${c.id}`,25,"Possible scam message",`${c.where}: “${String(c.text).slice(0,140)}”`,c.at,"message");
+  for(const c of [...(S.campaigns||[]),...(S.feed||[]),...(S.notices||[])]){const tx=[c.title,c.body,c.caption].filter(Boolean).join(" ");if(isScammy(tx))add(c.by||c.byId,`sc:${c._id}`,25,"Possible scam message",`“${tx.slice(0,140)}”`,c.at,"message");}
+  for(const f of MON.fin)add(f.by,`fi:${f.key}`,10,f.title,f.why,f.at,"money");
+  const seen=new Set(),uniq=A.filter(a=>!seen.has(a.key)&&seen.add(a.key));
+  const open=uniq.filter(a=>!(G.mon||{})[a.key]);const score={};for(const a of open)if(a.uid)score[a.uid]=Math.min(100,(score[a.uid]||0)+a.pts);
+  return {all:uniq,open,score,U,byUid};}
+async function monScanChats(){const out=[];for(const t of S.teams){const c=db.collection(`teams/${t._id}/chat`);try{const R=rows(await (c.orderBy?c.orderBy("at","desc").limit(60):c).get());for(const m of R)if(isScammy(m.text))out.push({by:m.by,at:m.at,text:m.text,id:m._id,path:t._id,where:`${t.name} chat`});}catch(e){}}
+  MON.chat=out;MON.scanned.chat=Date.now();rerender();toast(`Checked recent chats – ${out.length} suspicious`);}
+async function monScanFin(){const out=[];for(const t of S.teams){let R=[];try{R=rows(await db.collection(`teams/${t._id}/finance`).get());}catch(e){continue;}const amts=R.map(r=>n(r.amount)).filter(x=>x>0);const md=median(amts);
+  for(const r of R){if(r.date&&r.at&&pd(r.date)&&dd(pd(r.at.slice(0,10)),pd(r.date))>7)out.push({key:`${t._id}:${r._id}:bd`,by:r.by,at:r.at,title:"Back-dated finance entry",why:`${t.name}: ${naira(r.amount)} dated ${fmtS(r.date)} but entered ${fmtS(r.at.slice(0,10))}.`});
+    if(amts.length>=5&&n(r.amount)>=50000&&md&&n(r.amount)>3*md)out.push({key:`${t._id}:${r._id}:big`,by:r.by,at:r.at,title:"Unusually large amount",why:`${t.name}: ${naira(r.amount)} – about ${Math.round(n(r.amount)/md)}× the group's usual entry.`});}}
+  MON.fin=out;MON.scanned.fin=Date.now();rerender();toast(`Checked finances – ${out.length} to look at`);}
+function monAlertRow(a,showWho=true){const[lv,c]=riskOf(a.pts*2);const done=(G.mon||{})[a.key];
+  return `<div class="ri" style="cursor:default"><div>${a.uid?avatar(a.uid,34):`<span class="malert">${ic("alert")}</span>`}</div><div style="min-width:0"><div class="t">${esc(a.title)}</div><div class="m">${showWho?esc(a.uid?who(a.uid):"Unknown person")+" · ":""}${a.at?esc(ago(a.at)):""}</div>${a.why?`<div class="small" style="margin-top:3px">${esc(a.why)}</div>`:""}${done?`<div class="small muted">Reviewed by ${esc(who(done.by))}${done.note?" – "+esc(done.note):""}</div>`:""}</div>
+   <div class="r">${pill(lv,c)}${a.uid&&showWho?`<button class="btn sm ghost" data-monrev="${esc(a.uid)}">Review</button>`:""}${done?"":`<button class="btn sm ghost" data-monnote="${esc(a.key)}">Note</button><button class="btn sm pri" data-monok="${esc(a.key)}">Mark OK</button>`}</div></div>`;}
+P.monitor=()=>{if(!isSA())return PH("Activity Monitor","radar","For Super Admins only");
+  sub("c:sess",db.collection("sessions"),snap=>{G.allsess=rows(snap);rerender();});sub("c:monitor",db.collection("monitor"),snap=>{G.mon=Object.fromEntries(rows(snap).map(r=>[r._id,r]));rerender();});
+  monLoad();const C=monCompute();const tab=LS.get("monTab","a");const td=tISO(),d7=iso(addD(today(),-6));
+  const act=new Set(MON.usage.filter(r=>r.date===td).map(r=>r.uid)),actW=new Set(MON.usage.filter(r=>r.date>=d7).map(r=>r.uid));
+  const newDev=(G.allsess||[]).filter(s=>s.first&&Date.now()-Date.parse(s.first)<7*864e5).length;const high=Object.values(C.score).filter(s=>s>=50).length;
+  const Hh=Array(24).fill(0);for(const r of MON.usage)if(r.date>=d7)for(const[h,c]of Object.entries(r.h||{}))Hh[+h]+=n(c);const mx=Math.max(1,...Hh);
+  const showDone=LS.get("monDone",0);const AL=(showDone?C.all:C.open).slice().sort((a,b)=>b.pts-a.pts||(b.at||"").localeCompare(a.at||""));
+  const ppl=S.members.map(m=>({u:m._id,s:C.score[m._id]||0,n7:(C.U[m._id]||[]).filter(r=>r.date>=d7).reduce((s,r)=>s+n(r.n),0),last:((C.byUid[m._id]||[]).map(s=>s.last).filter(Boolean).sort().pop())||"",sus:!!m.suspended})).sort((a,b)=>b.s-a.s||b.n7-a.n7);
+  const body=tab==="a"?`<div class="card"><div class="hd"><h2>Alerts</h2><label class="chk small" style="margin-left:auto"><input type="checkbox" id="monDone" ${showDone?"checked":""}> Show reviewed</label></div><div class="rows">${AL.map(a=>monAlertRow(a)).join("")||`<div class="empty"><b>Nothing unusual</b>No warning signs right now. Checks run on sign-ins, devices, usage patterns, messages, downloads and money records.</div>`}</div></div>`
+   :tab==="p"?`<div class="card"><div class="hd"><h2>People</h2><span class="n">risk score from open alerts · 0–24 low, 25–49 medium, 50+ high</span></div><div class="rows">${ppl.map(p=>{const[lv,c]=riskOf(p.s);return `<button class="ri" data-monrev="${esc(p.u)}"><div>${avatar(p.u,34)}</div><div style="min-width:0"><div class="t">${esc(who(p.u))}${p.sus?" "+pill("Suspended","p-crit"):""}</div><div class="m">${p.n7} page views this week${p.last?" · last seen "+esc(ago(p.last)):""}</div><div class="rbar"><i style="width:${p.s}%" class="${c}"></i></div></div><div class="r">${pill(`${lv} · ${p.s}`,c)}</div></button>`;}).join("")}</div></div>`
+   :`<div class="grid g2" style="align-items:start"><div class="card"><div class="hd"><h2>Failed sign-ins</h2><span class="n">last 7 days</span></div><div class="rows">${MON.lf.filter(f=>f.last&&Date.now()-Date.parse(f.last)<7*864e5).sort((a,b)=>(b.last||"").localeCompare(a.last||"")).map(f=>`<div class="ri" style="cursor:default"><div><span class="malert">${ic("lock")}</span></div><div style="min-width:0"><div class="t">${esc(f.email||"")}</div><div class="m">${n(f.count)} in the last hour window · ${n(f.total)} in total · ${esc(ago(f.last))}</div><div class="m">${esc([f.city,f.country].filter(Boolean).join(", "))}${f.ip?" · IP "+esc(f.ip):""}</div></div><div class="r">${(f.count||0)>2?pill("Over 2 tries","p-crit"):pill(`${n(f.count)} tries`,"p-off")}</div></div>`).join("")||`<div class="empty">No failed sign-ins this week.</div>`}</div></div>
+     <div class="card"><div class="hd"><h2>Recent sign-ins</h2></div><div class="rows">${(G.allsess||[]).slice().sort((a,b)=>(b.last||"").localeCompare(a.last||"")).slice(0,40).map(s=>`<div class="ri" style="cursor:default"><div>${avatar(s.uid,30)}</div><div style="min-width:0"><div class="t">${esc(who(s.uid))}</div><div class="m">${esc(s.label||"Device")} · ${esc(ago(s.last))}${s.city?" · "+esc(s.city):""}${s.ip?" · "+esc(s.ip):""}</div></div><div class="r">${s.revoked?pill("Signed out","p-off"):""}</div></div>`).join("")||`<div class="empty">No sign-ins recorded yet.</div>`}</div></div></div>`;
+  return PH("Activity Monitor","radar","Spots behaviour that's unusual for a person or for the church – possible account takeover, data harvesting, scams or money changes",`${btn(`${ic("search")}Check chats`,'data-monscan="chat"',"ghost")}${btn(`${ic("search")}Check finances`,'data-monscan="fin"',"ghost")}${btn("Refresh",'data-monref="1"',"ghost")}`)+
+  `<div class="stats" style="margin-bottom:14px"><div class="stat"><div class="v">${act.size}</div><div class="l">Active today</div></div><div class="stat"><div class="v">${actW.size}</div><div class="l">Active this week</div></div><div class="stat"><div class="v">${newDev}</div><div class="l">New devices (7 days)</div></div><div class="stat"><div class="v ${C.open.length?"c-warn":""}">${C.open.length}</div><div class="l">Open alerts</div></div><div class="stat"><div class="v ${high?"c-crit":""}">${high}</div><div class="l">High-risk people</div></div></div>
+  <div class="card" style="margin-bottom:14px"><div class="hd"><h2>When people use the app</h2><span class="n">page views by hour, last 7 days${MON.busy?" · loading…":""}</span></div><div class="bd"><div class="mbars">${Hh.map((c,h)=>`<div class="mbar ${h<5?"night":""}" title="${h}:00 – ${c} views"><i style="height:${Math.round(c/mx*100)}%"></i><span>${h%3===0?h:""}</span></div>`).join("")}</div><div class="small muted">Darker bars are midnight to 5am.${MON.scanned.chat?` Chats checked ${ago(new Date(MON.scanned.chat).toISOString())}.`:""}${MON.scanned.fin?` Finances checked ${ago(new Date(MON.scanned.fin).toISOString())}.`:""}</div></div></div>
+  <div class="chips" style="margin-bottom:12px"><button class="chip ${tab==="a"?"on":""}" data-montab="a">Alerts <b>${C.open.length}</b></button><button class="chip ${tab==="p"?"on":""}" data-montab="p">People</button><button class="chip ${tab==="s"?"on":""}" data-montab="s">Sign-ins</button></div>`+body+
+  `<div class="small muted" style="margin-top:10px">The monitor sees everything done through the app and every change to data. Someone reading data outside the app won't show as "views", but the database rules still limit what they can read.</div>`;};
+H8.montab=t=>{LS.set("monTab",t.dataset.montab);render();};
+H8.monref=()=>{MON.loaded=0;monLoad(true);toast("Refreshing…");};
+H8.monscan=t=>t.dataset.monscan==="chat"?monScanChats():monScanFin();
+H8.monok=async t=>{const k=t.dataset.monok;try{await db.doc(`monitor/${k}`).set({status:"ok",by:me.id,at:nowISO()},{merge:true});G.mon={...(G.mon||{}),[k]:{status:"ok",by:me.id}};logAct("reviewed alert","monitor",k,"");toast("Marked as reviewed");render();}catch(e){toast(errMsg(e));}};
+H8.monnote=async t=>{const k=t.dataset.monnote;const note=prompt("Add a note (it also marks the alert as reviewed):");if(note==null)return;try{await db.doc(`monitor/${k}`).set({status:"ok",note:note.slice(0,300),by:me.id,at:nowISO()},{merge:true});G.mon={...(G.mon||{}),[k]:{status:"ok",note,by:me.id}};render();}catch(e){toast(errMsg(e));}};
+H8.monout=async t=>{const u=t.dataset.monout;let ok=false;try{ok=window.HOH_WEB&&window.HOH_WEB.revokeSession?await window.HOH_WEB.revokeSession(u,""):false;}catch(e){}
+  if(!ok)for(const s of (G.allsess||[]).filter(s=>s.uid===u&&!s.revoked)){const d={...s,revoked:true,revokedBy:me.id,revokedAt:nowISO(),trusted:false};delete d._id;await save("sessions",s._id,d,{quiet:true,log:false});ok=true;}
+  logAct("signed out all devices","sessions",u,who(u));toast(ok?`${who(u)} will be signed out of every device`:"Couldn't sign them out");};
+H8.monrev=t=>{const u=t.dataset.monrev;const C=monCompute();const s=C.score[u]||0;const[lv,c]=riskOf(s);const m=S.members.find(x=>x._id===u)||{};const own=u===settings.ownerUid||u===me.id;
+  const L=(C.U[u]||[]);const days=[...Array(14)].map((_,i)=>iso(addD(today(),-13+i)));const per=days.map(d=>L.filter(r=>r.date===d).reduce((a,r)=>a+n(r.n),0));const mx=Math.max(1,...per);
+  const acts=(S.activity||[]).filter(a=>a.by===u).slice(0,25);
+  sheet({title:who(u),body:`<div style="display:flex;gap:12px;align-items:center">${avatar(u,52)}<div><b>${esc(who(u))}</b><div class="chips" style="margin-top:4px">${pill(`${lv} risk · ${s}`,c)}${m.suspended?pill("Suspended","p-crit"):""}${(m.rid||[]).includes("super-admin")?pill("Super Admin","p-brand"):(m.rid||[]).includes("admin")?pill("Admin","p-info"):""}</div></div></div>
+   <div class="card"><div class="hd"><h2>Warning signs</h2></div><div class="rows">${C.all.filter(a=>a.uid===u).map(a=>monAlertRow(a,false)).join("")||`<div class="empty">Nothing unusual.</div>`}</div></div>
+   <div class="card"><div class="hd"><h2>Use in the last 14 days</h2></div><div class="bd"><div class="mbars sm">${per.map((v,i)=>`<div class="mbar" title="${fmtS(days[i])}: ${v} views"><i style="height:${Math.round(v/mx*100)}%"></i><span>${i%3===0?pd(days[i]).getDate():""}</span></div>`).join("")}</div></div></div>
+   <div class="card"><div class="hd"><h2>Devices</h2></div><div class="rows">${(C.byUid[u]||[]).sort((a,b)=>(b.last||"").localeCompare(a.last||"")).map(x=>`<div class="ri" style="cursor:default"><div></div><div><div class="t">${esc(x.label||"Device")}</div><div class="m">first ${esc(ago(x.first))} · last ${esc(ago(x.last))}${x.city?" · "+esc([x.city,x.country].filter(Boolean).join(", ")):""}${x.ip?" · "+esc(x.ip):""}${x.revoked?" · signed out":""}</div></div></div>`).join("")||`<div class="empty">No devices recorded.</div>`}</div></div>
+   <div class="card"><div class="hd"><h2>Recent actions</h2></div><div class="rows">${acts.map(a=>`<div class="ri" style="cursor:default"><div></div><div><div class="t">${esc(a.act||"")}</div><div class="m">${esc(a.coll||"")}${a.label?" · "+esc(a.label):""} · ${esc(ago(a.at))}</div></div></div>`).join("")||`<div class="empty">No recorded actions.</div>`}</div></div>`,
+   foot:`${own?"":`<button class="btn ghost" data-monout="${esc(u)}">${ic("signout")}Sign out all devices</button><button class="btn ${m.suspended?"pri":"danger"}" data-suspend="${esc(u)}|${m.suspended?0:1}">${ic("lock")}${m.suspended?"Restore access":"Suspend"}</button>`}<span style="flex:1"></span><button class="btn ghost" data-close="1">Close</button>`});};
+document.addEventListener("change",e=>{if(e.target.id==="monDone"){LS.set("monDone",e.target.checked?1:0);render();}});
+{const _b=badgeFor;badgeFor=function(page){if(page==="monitor"&&isSA()&&MON.loaded){const c=monCompute().open.filter(a=>a.pts>=25).length;return c||"";}return _b(page);};}
+
+// ---------- security rules v10 ----------
+{const _rt=rulesText;rulesText=function(){let s=_rt().replace("security rules (v9)","security rules (v10)");
+  const R=(a,b)=>{if(!s.includes(a))console.warn("rules patch missed:",a.slice(0,70));s=s.replace(a,()=>b);};
+  R("function approved() { return owner() || (si() && exists(mref())); }","function approved() { return owner() || (si() && exists(mref()) && mem().get('suspended', false) != true); }");
+  R("function admin() { return owner() || (si() && exists(mref()) && mem().get('rid', []).hasAny(['admin'])); }",
+    "function admin() { return owner() || (approved() && mem().get('rid', []).hasAny(['admin', 'super-admin'])); }\n    function sa() { return owner() || (approved() && mem().get('rid', []).hasAny(['super-admin'])); }\n    function protectedRoles() { return ['admin', 'super-admin'].concat(st().perm.w.get('finance', [])); }");
+  R("match /settings/{id} { allow read: if approved(); allow write: if admin(); }",
+    "match /settings/{id} { allow read: if approved(); allow create: if admin(); allow update: if sa() || (admin() && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['access2', 'perm', 'approvers', 'hier', 'hierInit'])); allow delete: if sa(); }");
+  R("    match /members/{u} {\n      allow read: if approved() || (si() && uid() == u);\n      allow write: if admin();",
+    "    match /members/{u} {\n      allow read: if approved() || (si() && uid() == u);\n      // only a Super Admin gives or removes Admin, Super Admin or finance roles, suspends, or removes people\n      allow create: if sa() || (admin() && !request.resource.data.get('rid', []).toSet().difference(['member'].toSet()).hasAny(protectedRoles()) && request.resource.data.get('suspended', false) == false);\n      allow update: if sa() || (admin() && !request.resource.data.get('rid', []).toSet().difference(resource.data.get('rid', []).toSet()).difference(['member'].toSet()).hasAny(protectedRoles())\n        && !resource.data.get('rid', []).toSet().difference(request.resource.data.get('rid', []).toSet()).hasAny(['admin', 'super-admin'])\n        && request.resource.data.get('suspended', false) == resource.data.get('suspended', false));\n      allow delete: if sa();");
+  R("      allow read: if admin() || (approved() && ids().hasAny([r])) || was('makerId');","      allow read: if sa() || (r != 'super-admin' && (admin() || (approved() && ids().hasAny([r])))) || was('makerId');");
+  R("      allow update: if (admin() || (approved() && ids().hasAny([r]))) && resource.data.makerId != uid();\n      allow delete: if admin() || was('makerId');",
+    "      allow update: if ((r == 'super-admin' && sa()) || (r != 'super-admin' && (admin() || (approved() && ids().hasAny([r]))))) && resource.data.makerId != uid();\n      allow delete: if sa() || (r != 'super-admin' && admin()) || was('makerId');");
+  R("match /secq/{u} { allow read, create, update: if si() && uid() == u; allow delete: if admin() || (si() && uid() == u); }","match /secq/{u} { allow read, create, update: if si() && uid() == u; allow delete: if sa() || (si() && uid() == u); }");
+  R("      allow delete: if admin();\n      match /crew/{u} {","      allow delete: if sa();\n      match /crew/{u} {");
+  R("      match /log/{id}","      match /chatreads/{u} { allow read: if see(g); allow write: if si() && uid() == u && (inGroup(g) || ovs(g)); }\n      match /log/{id}");
+  R("match /finance/{id} { allow read: if officer(g) || ovs(g) || canR('finance'); allow write: if officer(g); }","match /finance/{id} { allow read: if officer(g) || ovs(g) || canR('finance'); allow create: if officer(g); allow update, delete: if sa(); }");
+  R("match /duespay/{id} { allow read: if officer(g) || ovs(g) || canR('finance') || was('uid'); allow write: if officer(g); }","match /duespay/{id} { allow read: if officer(g) || ovs(g) || canR('finance') || was('uid'); allow create: if officer(g); allow update, delete: if sa(); }");
+  s=s.replace(/      match \/duesplan\/\{id\} \{[\s\S]*?\n      \}\n/,()=>"      match /duesplan/{id} { allow read: if see(g) || canR('finance'); allow create, update: if false; allow delete: if officer(g); }\n");
+  R("      allow read: if (si() && uid() == u) || admin() || canR('repository') || canR('followup') || canR('support') || (approved() && ids().hasAny(['group-lead', 'pastorate']));",
+    "      allow read: if (si() && uid() == u) || admin() || canR('seecontacts')\n        || (approved() && exists(/databases/$(database)/documents/contactreq/$(uid() + '_' + u)) && get(/databases/$(database)/documents/contactreq/$(uid() + '_' + u)).data.status == 'Allowed')\n        || (approved() && ids().hasAny(['group-lead']) && exists(/databases/$(database)/documents/members/$(u)) && mem().get('groups', []).hasAny(get(/databases/$(database)/documents/members/$(u)).data.get('groups', [])));");
+  R("match /people/{id} { allow read: if canR('repository'); allow write: if canW('repository'); }",
+    `match /people/{id} { allow read: if canR('repository'); allow create, update: if canW('repository') && (sa() || !request.resource.data.keys().hasAny(['phone', 'email', 'address'])); allow delete: if canW('repository'); }
+    match /peoplepriv/{id} { allow read: if admin() || canR('seecontacts'); allow write: if canW('repository'); }
+    match /contactreq/{id} {
+      allow read: if (si() && (resource.data.from == uid() || resource.data.to == uid())) || sa();
+      allow create: if approved() && mine('from') && id == uid() + '_' + request.resource.data.to && request.resource.data.to != uid() && request.resource.data.status == 'Pending';
+      allow update: if si() && resource.data.to == uid() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedAt']) && request.resource.data.status in ['Allowed', 'Declined'];
+      allow delete: if (si() && (resource.data.to == uid() || (resource.data.from == uid() && resource.data.status != 'Declined'))) || admin();
+    }
+    match /seen/{id} { allow read: if approved(); allow create, update: if approved() && mine('u') && id == request.resource.data.k + '__' + uid(); }
+    match /usage/{id} { allow read: if sa(); allow create, update: if approved() && mine('uid') && id.matches(uid() + '_.*'); }
+    match /flags/{id} { allow read, update, delete: if sa(); allow create: if approved() && mine('by'); }
+    match /monitor/{id} { allow read, write: if sa(); }
+    match /loginfails/{id} { allow read: if sa(); }`);
+  return s;};}
+
 // ================= settings =================
 const PROFILE_F=[["churchName","Church name"],["churchSub","Assembly name"],["region","Region"],["address","Address"],["phones","Phone numbers (letterhead footer)"],["email","Email"],["social","Social handle"],["coordPhone","Program coordinator's phone"],["sig1Name","Signatory 1 – name"],["sig1Title","Signatory 1 – title"],["sig2Name","Signatory 2 – name"],["sig2Title","Signatory 2 – title"]];
 P.general=()=>{const ed=canE("settings");return PH("Church profile","church","Used on the letterhead, letters, reminders and reports",ed?`<button class="btn pri" id="profSave">Save profile</button>`:"")+
@@ -3494,7 +3924,7 @@ const LIST_EDIT=[["ChildSecServices","Services with a children's section"],["Cat
 P.lists=()=>{const ed=canE("settings");return PH("Dropdown lists","list","One option per line · changes apply everywhere straight away",ed?`<button class="btn pri" id="listSave">Save lists</button>`:"")+
   `<div class="grid g3">${LIST_EDIT.map(([k,l])=>`<div class="card"><div class="hd"><h2>${l}</h2></div><div class="bd"><textarea class="in" id="ls_${k}" style="min-height:180px" ${ed?"":"disabled"}>${esc((L[k]||[]).join("\n"))}</textarea></div></div>`).join("")}</div>`;};
 P.data=()=>PH("Data & export","db","Download everything, or add programs to your phone's calendar")+
- `<div class="grid g2"><div class="card"><div class="hd"><h2>Export</h2></div><div class="bd stack">${dl?`<button class="btn pri" data-xlsx="1">${ic("dl")}Download everything as Excel</button><button class="btn" data-ics="1">${ic("cal")}Upcoming programs as a calendar file (.ics)</button>`:`<span class="muted">Downloads aren't available in this view.</span>`}<div class="small muted">Every list also has its own CSV button for the rows you've filtered.</div></div></div>
+ `<div class="grid g2"><div class="card"><div class="hd"><h2>Export</h2></div><div class="bd stack">${dl?`${isSA()?`<button class="btn pri" data-xlsx="1">${ic("dl")}Download everything as Excel</button>`:`<div class="small muted">Downloading everything is for Super Admins.</div>`}<button class="btn" data-ics="1">${ic("cal")}Upcoming programs as a calendar file (.ics)</button>`:`<span class="muted">Downloads aren't available in this view.</span>`}<div class="small muted">Every list also has its own CSV button for the rows you've filtered.</div></div></div>
  <div class="card"><div class="hd"><h2>What's stored</h2></div><div class="tw"><table><tbody>${COLLS.map(c=>`<tr><td>${c}</td><td class="num">${(S[c]||[]).length}</td></tr>`).join("")}<tr><td><b>Records in main registers</b><div class="small muted">The free plan allows about 1 GB of storage – hundreds of thousands of records. You are well within it.</div></td><td class="num"><b>${COLLS.reduce((s,c)=>s+(S[c]||[]).length,0).toLocaleString()}</b></td></tr></tbody></table></div></div></div>`;
 P.log=()=>PH("Activity log","clock","Who changed what, and when")+
  LT("activity",{rows:S.activity,sort:"at",dir:"desc",text:a=>[who(a.by),a.act,a.coll,a.label].join(" "),cols:[{k:"at",label:"When",get:a=>a.at||"",html:a=>`<b>${fmtS((a.at||"").slice(0,10))}</b><div class="m">${(a.at||"").slice(11,16)}</div>`},{k:"by",label:"Who",get:a=>who(a.by)},{k:"act",label:"Did",get:a=>a.act||"",html:a=>pill(a.act||"",a.act==="deleted"?"p-crit":a.act==="created"?"p-ok":"p-info")},{k:"coll",label:"Area",get:a=>a.coll||""},{k:"label",label:"Record",get:a=>a.label||""}],

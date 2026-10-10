@@ -8,7 +8,7 @@ function app() {
 const reply = (code, obj) => ({ statusCode: code, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }, body: JSON.stringify(obj) });
 // Limits: ordinary members can alert up to 30 people per message and 150 per hour; leaders, offices and admins more.
 const LIMITS = { member: [30, 150], staff: [500, 3000] };
-const STAFF_ROLES = ["admin", "group-lead", "pastorate", "secretariat", "key-programs-committee", "media-team", "app-admin-team", "church-administration"];
+const STAFF_ROLES = ["super-admin", "admin", "group-lead", "pastorate", "secretariat", "key-programs-committee", "media-team", "app-admin-team", "church-administration"];
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return reply(405, { error: "POST only" });
@@ -22,6 +22,7 @@ exports.handler = async (event) => {
   const member = await db.doc(`members/${caller.uid}`).get();
   if (!member.exists) return reply(403, { error: "Not an approved member" });
   const m = member.data();
+  if (m.suspended) return reply(403, { error: "Access paused" });
   const staff = [...(m.rid || []), ...(m.groups || [])].some((r) => STAFF_ROLES.includes(r));
   const [perMsg, perHour] = LIMITS[staff ? "staff" : "member"];
 
