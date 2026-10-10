@@ -527,6 +527,23 @@ button.setrow{cursor:pointer}.setrow.danger,.setrow.danger svg{color:var(--crit)
 .rbar i{display:block;height:100%}.rbar i.p-ok{background:var(--ok,#1a7f37)}.rbar i.p-warn{background:var(--warn,#b54708)}.rbar i.p-crit{background:var(--crit,#b42318)}
 .malert{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--surface2);color:var(--warn,#b54708)}
 .malert svg{width:18px;height:18px}
+.hd h2>svg{width:18px;height:18px;vertical-align:-3px;margin-right:6px;flex:none}
+/* v11 */
+.note-warn{display:flex;gap:10px;padding:12px 14px;border-radius:12px;background:var(--warnbg);color:var(--fg);margin-bottom:12px;font-size:13px;align-items:flex-start}
+.note-warn svg{width:20px;height:20px;color:var(--warn);flex:none}
+.trust{display:flex;flex-direction:column;gap:6px;margin:4px 0}
+.ts{display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:500;color:var(--fg);padding:7px 10px;border-radius:10px;background:var(--surface2)}
+.ts span{font-weight:800;width:16px;text-align:center;flex:none}
+.ts.ok span{color:var(--ok)}.ts.warn{background:var(--warnbg)}.ts.warn span{color:var(--warn)}.ts.bad{background:var(--critbg)}.ts.bad span{color:var(--crit)}
+.vtick{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--brand);color:#fff;margin-left:4px;vertical-align:-2px}
+.vtick svg{width:10px;height:10px;stroke-width:3.5}
+.newb{margin-left:5px;font-size:10px;padding:1px 6px;vertical-align:1px}
+.msg .lnk.rep{opacity:.55;padding:0 2px}.msg .lnk.rep svg{width:12px;height:12px;vertical-align:-1px}
+.msg.me .vtick{background:#fff;color:var(--brand)}
+.sumt{width:100%;border-collapse:collapse;margin-top:6px;font-size:14px}
+.sumt td{padding:7px 4px;border-bottom:1px solid var(--line)}
+.sumt td.num{text-align:right;white-space:nowrap}
+.tab svg{width:13px;height:13px;vertical-align:-2px;margin-right:3px;opacity:.7}
 </style>
 
 <style>body{padding-top:env(safe-area-inset-top,0px)}</style>
@@ -545,7 +562,7 @@ const OWNER_EMAILS = ["oseghaleellis@gmail.com"];
   let user=null;
   const loadJs=src=>new Promise((ok,no)=>{const sc=document.createElement("script");sc.src=src;sc.onload=ok;sc.onerror=no;document.head.appendChild(sc);});
   let msgr=null,myToken=null;
-  window.HOH_WEB={signOut:()=>auth.signOut().then(()=>location.reload()),resetPassword:em=>auth.sendPasswordResetEmail(em),owners:OWNER_EMAILS,
+  window.HOH_WEB={get verified(){return !!(user&&user.emailVerified);},signOut:()=>auth.signOut().then(()=>location.reload()),resetPassword:em=>auth.sendPasswordResetEmail(em),owners:OWNER_EMAILS,
     registerPush:async vapidKey=>{if(!user||!("serviceWorker" in navigator))return false;if(!firebase.messaging)await loadJs("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
       if(firebase.messaging.isSupported&&!(await firebase.messaging.isSupported()))return false;msgr=msgr||firebase.messaging();const reg=await navigator.serviceWorker.ready;
       myToken=await msgr.getToken({vapidKey,serviceWorkerRegistration:reg});if(!myToken)return false;
@@ -555,7 +572,7 @@ const OWNER_EMAILS = ["oseghaleellis@gmail.com"];
     recordSession:async payload=>{if(!user)return false;const tok=await user.getIdToken();const r=await fetch("/.netlify/functions/session",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+tok},body:JSON.stringify(payload)});return r.ok;},
     pushSend:async payload=>{if(!user)return false;const tok=await user.getIdToken();const r=await fetch("/.netlify/functions/push",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+tok},body:JSON.stringify(payload)});return r.ok;}};
   const wd=d=>({id:d.id,exists:d.exists,data:()=>d.data(),metadata:d.metadata});
-  const docw=r=>({id:r.id,path:r.path,set:d=>r.set(d),update:d=>r.update(d),delete:()=>r.delete(),get:()=>r.get().then(wd),onSnapshot:(n,e)=>r.onSnapshot(s=>n(wd(s)),e||(()=>{}))});
+  const docw=r=>({id:r.id,path:r.path,set:(d,o)=>o?r.set(d,o):r.set(d),update:d=>r.update(d),delete:()=>r.delete(),get:()=>r.get().then(wd),onSnapshot:(n,e)=>r.onSnapshot(s=>n(wd(s)),e||(()=>{}))});
   const qw=q=>({where:(a,o,b)=>qw(q.where(a,o,b)),orderBy:(f,d)=>qw(q.orderBy(f,d)),limit:n=>qw(q.limit(n)),get:()=>q.get().then(s=>({docs:s.docs.map(wd),size:s.size,empty:s.empty})),onSnapshot:(n,e)=>q.onSnapshot(s=>n({docs:s.docs.map(wd),size:s.size,empty:s.empty}),e||(()=>{}))});
   const colw=c=>({path:c.path,where:(a,o,b)=>qw(c.where(a,o,b)),orderBy:(f,d)=>qw(c.orderBy(f,d)),limit:n=>qw(c.limit(n)),doc:id=>docw(id?c.doc(id):c.doc()),add:d=>c.add(d).then(docw),get:()=>c.get().then(s=>({docs:s.docs.map(wd),size:s.size,empty:s.empty})),onSnapshot:(n,e)=>c.onSnapshot(s=>n({docs:s.docs.map(wd),size:s.size,empty:s.empty}),e||(()=>{}))});
   const DB={collection:p=>colw(fs.collection(p)),doc:p=>docw(fs.doc(p))};
@@ -575,16 +592,32 @@ const OWNER_EMAILS = ["oseghaleellis@gmail.com"];
    <button class="btn pri lg-g" id="lgGoogle"><svg viewBox="0 0 48 48" width="18" height="18"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Continue with Google</button>
    <div class="lg-or"><span>or use email</span></div>
    <div class="chips" style="justify-content:center"><button class="chip ${mode==="in"?"on":""}" data-lm="in">Sign in</button><button class="chip ${mode==="up"?"on":""}" data-lm="up">Create account</button></div>
-   <form id="lgForm" class="stack" style="gap:10px;margin-top:12px">${mode==="up"?`<label class="f">Full name<input class="in" id="lgName" autocomplete="name" required></label>`:""}<label class="f">Email<input class="in" id="lgEmail" type="email" autocomplete="email" required></label><label class="f">Password<input class="in" id="lgPass" type="password" autocomplete="${mode==="up"?"new-password":"current-password"}" minlength="6" required></label>
+   <form id="lgForm" class="stack" style="gap:10px;margin-top:12px">${mode==="up"?`<label class="f">Full name<input class="in" id="lgName" autocomplete="name" required></label>`:""}<label class="f">Email<input class="in" id="lgEmail" type="email" autocomplete="email" required></label><label class="f">Password<input class="in" id="lgPass" type="password" autocomplete="${mode==="up"?"new-password":"current-password"}" minlength="${mode==="up"?8:6}" required></label>
    <button class="btn pri" type="submit" style="justify-content:center">${mode==="up"?"Create account":"Sign in"}</button>${mode==="in"?`<button class="btn ghost sm" type="button" id="lgReset" style="justify-content:center;border:0">Forgot password?</button>`:""}</form>
    <p class="lg-msg" id="lgMsg" role="alert"></p></div></div>`;
    L.querySelector("#lgGoogle").onclick=async()=>{msg("");const p=new firebase.auth.GoogleAuthProvider();try{await auth.signInWithPopup(p);}catch(e){if(["auth/popup-blocked","auth/operation-not-supported-in-this-environment"].includes(e.code))await auth.signInWithRedirect(p);else msg(friendly(e));}};
    L.querySelectorAll("[data-lm]").forEach(b=>b.onclick=()=>{mode=b.dataset.lm;drawLogin();});
    L.querySelector("#lgForm").onsubmit=async ev=>{ev.preventDefault();msg("");const em=L.querySelector("#lgEmail").value.trim(),pw=L.querySelector("#lgPass").value;
-     try{if(mode==="up"){const c=await auth.createUserWithEmailAndPassword(em,pw);const nm=L.querySelector("#lgName").value.trim();if(nm)await c.user.updateProfile({displayName:nm});location.reload();}else await auth.signInWithEmailAndPassword(em,pw);}catch(e){msg(friendly(e));if(mode!=="up"&&/wrong-password|invalid-credential|user-not-found|too-many-requests|invalid-login/.test(String(e&&e.code)))fetch("/.netlify/functions/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"fail",email:em,code:String(e.code||"")})}).catch(()=>{});}};
+     try{if(mode==="up"){const nm=L.querySelector("#lgName").value.trim();const bad=await signupProblem(nm,em,pw);if(bad){msg(bad);return;}const c=await auth.createUserWithEmailAndPassword(em,pw);if(nm)await c.user.updateProfile({displayName:nm});try{await c.user.sendEmailVerification();}catch(e){}location.reload();}else await auth.signInWithEmailAndPassword(em,pw);}catch(e){msg(friendly(e));if(mode!=="up"&&/wrong-password|invalid-credential|user-not-found|too-many-requests|invalid-login/.test(String(e&&e.code)))fetch("/.netlify/functions/session",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"fail",email:em,code:String(e.code||"")})}).catch(()=>{});}};
    const rs=L.querySelector("#lgReset");if(rs)rs.onclick=async()=>{const em=L.querySelector("#lgEmail").value.trim();if(!em){msg("Type your email above first, then tap “Forgot password?”.");return;}try{await auth.sendPasswordResetEmail(em);msg("A reset link is on its way to "+em+".");}catch(e){msg(friendly(e));}};}
+  const NAME_OK=v=>/^[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ .'\-]{1,59}$/.test(v)&&v.split(/\s+/).filter(w=>/[A-Za-zÀ-ÿ]{2,}/.test(w)).length>=2;
+  const DEF_ALLOW=["gmail.com","googlemail.com","yahoo.com","ymail.com"];
+  async function signupList(){try{const d=await fs.doc("public/signup").get();if(d.exists)return{allow:d.data().allow||DEF_ALLOW,block:d.data().block||[]};}catch(e){}return{allow:DEF_ALLOW,block:[]};}
+  async function domainProblem(em){const dom=String(em||"").toLowerCase().split("@")[1]||"";const l=await signupList();if(l.block.includes(dom)||(l.allow.length&&!l.allow.includes(dom)))return "New accounts can only use these email providers: "+l.allow.join(", ")+". Please use one of them (for example your Gmail address).";return "";}
+  async function signupProblem(nm,em,pw){if(!NAME_OK(nm))return "Please enter your real first and last name using letters only.";if(!/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/.test(em))return "That email address doesn't look right.";
+    if(pw.length<8||!/[A-Za-z]/.test(pw)||!/[0-9]/.test(pw))return "Use a password of at least 8 characters with letters and numbers.";return domainProblem(em);}
+  function gate(html,wire){L.innerHTML=`<div class="lg-wrap"><div class="lg-card"><img src="icon-192.png" alt="" class="lg-logo">${html}<p class="lg-msg" id="lgMsg" role="alert"></p></div></div>`;L.hidden=false;wire&&wire();}
+  function verifyGate(u){gate(`<h1>Check your inbox</h1><p class="lg-sub">We sent a link to <b>${String(u.email||"").replace(/[<>&"]/g,"")}</b>. Open it to confirm this email is yours, then come back and tap “I've verified”.</p>
+    <button class="btn pri" id="vgDone" style="justify-content:center">I've verified</button><button class="btn ghost" id="vgSend" style="justify-content:center">Send the link again</button><button class="btn ghost sm" id="vgOut" style="justify-content:center;border:0">Use a different account</button>`,()=>{
+    L.querySelector("#vgDone").onclick=async()=>{await u.reload();if(auth.currentUser&&auth.currentUser.emailVerified){await auth.currentUser.getIdToken(true);location.reload();}else msg("Not verified yet – open the link in the email first (check Spam too).");};
+    L.querySelector("#vgSend").onclick=async()=>{try{await u.sendEmailVerification();msg("Sent – check your inbox and Spam folder.");}catch(e){msg("Please wait a minute before asking again.");}};
+    L.querySelector("#vgOut").onclick=()=>auth.signOut().then(()=>location.reload());});}
+  function blockedGate(text){gate(`<h1>Can't create an account</h1><p class="lg-sub">${text}</p><button class="btn pri" id="bgOut" style="justify-content:center">Use a different account</button>`,()=>{L.querySelector("#bgOut").onclick=()=>auth.signOut().then(()=>location.reload());});}
   let started=false;
-  auth.onAuthStateChanged(u=>{user=u;if(!u){drawLogin();L.hidden=false;return;}L.hidden=true;if(started)return;started=true;const go=()=>window.__startApp?window.__startApp():setTimeout(go,50);go();});
+  auth.onAuthStateChanged(async u=>{user=u;if(!u){drawLogin();L.hidden=false;return;}
+    const prov=((u.providerData||[])[0]||{}).providerId||"";if(prov==="password"&&!u.emailVerified&&!OWNER_EMAILS.includes((u.email||"").toLowerCase())){verifyGate(u);return;}
+    try{const pr=await fs.doc("profiles/"+u.uid).get();if(!pr.exists){const p=await domainProblem(u.email);if(p&&!OWNER_EMAILS.includes((u.email||"").toLowerCase())){blockedGate(p);return;}}}catch(e){}
+    L.hidden=true;if(started)return;started=true;const go=()=>window.__startApp?window.__startApp():setTimeout(go,50);go();});
   if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 })();
 </script>
@@ -818,7 +851,7 @@ function syncSubs(){if(!db)return;const approved=isOwner||!!myMember();if(approv
   // group spaces: crew, notices, roster for my groups; all rosters for central assigners
   const gs=new Set(mySpaces());S.teams.forEach(t=>{if(isAdminUser()||can("rosters")||canRoster(t._id))gs.add(t._id);});
   for(const g of gs){for(const k of ["roster"])sub(`g:${g}:${k}`,db.collection(`teams/${g}/${k}`),snap=>{G[`teams/${g}/${k}`]=rows(snap);S.rosters=Object.entries(G).filter(([p])=>p.endsWith("/roster")).flatMap(([p,r])=>r.map(x=>({...x,gid:p.split("/")[1],team:groupName(p.split("/")[1])})));rerender();});}
-  for(const g of mySpaces()){for(const k of ["notices"])sub(`g:${g}:${k}`,db.collection(`teams/${g}/${k}`),snap=>{G[`teams/${g}/${k}`]=rows(snap);rerender();});}
+  for(const g of mySpaces().filter(g=>privOK(g,"notices"))){for(const k of ["notices"])sub(`g:${g}:${k}`,db.collection(`teams/${g}/${k}`),snap=>{G[`teams/${g}/${k}`]=rows(snap);rerender();});}
   // my own join requests
   const p=S.profiles.find(x=>x._id===me.id);for(const g of ((p&&p.req)||[]))if(!myGroups().includes(g))sub(`req:${g}`,db.doc(`teams/${g}/crew/${me.id}`),s=>{G[`req/${g}`]=s.exists?s.data():null;rerender();});
   // approval queues for every role I hold
@@ -1685,7 +1718,7 @@ function gtMembers(g){const t=groupById(g);const lead=isLeadOf(g);const fin=isFi
   const canDirect=closed?(isAdminUser()||(g==="pastorate"&&isPastor())):isAdminUser();
   const adder=canDirect?`<div class="addrow"><label class="f">Add someone directly<select class="in" id="gAddSel">${personOpts("","Choose a person…",others)}</select></label>${btn("Add",`data-gadd="${esc(g)}|direct"`,"pri")}</div>`:lead&&!closed?`<div class="addrow"><label class="f">Nominate someone to join<select class="in" id="gAddSel">${personOpts("","Choose a person…",others)}</select></label>${btn("Nominate",`data-gadd="${esc(g)}|nom"`,"pri")}</div><div class="small muted" style="margin:-6px 0 12px">Nominations go to ${(t.overseers||[]).length?"the group's overseer":"the Pastorate"} for final approval.</div>`:"";
   return top+adder+`<div class="card"><div class="rows">${mem.sort((a,b)=>who(a).localeCompare(who(b))).map(u=>{const isL=t.leadUid===u||(!t.leadUid&&(t.leads||[]).includes(u)),isA=t.asstUid===u;const sr=isL?"Lead":isA?"Assistant":(crew[u]||{}).sub||"Member";
-    return `<div class="ri" style="cursor:default"><div>${avatar(u,36)}</div><div style="min-width:0"><div class="t">${esc(who(u))}</div><div class="m">${contactLine(u)}</div></div><div class="r">${lead&&!isL&&!isA?`<select class="in" style="width:auto" data-gsub="${esc(g)}|${esc(u)}" aria-label="Role in group">${[...new Set([...subroles().filter(x=>!["Lead","Assistant"].includes(x)),sr])].map(s=>`<option ${s===sr?"selected":""}>${esc(s)}</option>`).join("")}</select>${u!==me.id?`<button class="iconbtn" data-gremove="${esc(g)}|${esc(u)}" aria-label="Remove from group">${ic("x")}</button>`:""}`:pill(sr,isL||isA?"p-brand":"p-off")}</div></div>`;}).join("")||`<div class="empty">No members yet.</div>`}</div></div>
+    return `<div class="ri" style="cursor:default"><div>${avatar(u,36)}</div><div style="min-width:0"><div class="t">${esc(who(u))}${badges(u)}${titleOf(u)?` <span class="small muted">· ${esc(titleOf(u))}</span>`:""}</div><div class="m">${contactLine(u)}</div></div><div class="r">${lead&&!isL&&!isA?`<select class="in" style="width:auto" data-gsub="${esc(g)}|${esc(u)}" aria-label="Role in group">${[...new Set([...subroles().filter(x=>!["Lead","Assistant"].includes(x)),sr])].map(s=>`<option ${s===sr?"selected":""}>${esc(s)}</option>`).join("")}</select>${u!==me.id?`<button class="iconbtn" data-gremove="${esc(g)}|${esc(u)}" aria-label="Remove from group">${ic("x")}</button>`:""}`:pill(sr,isL||isA?"p-brand":"p-off")}</div></div>`;}).join("")||`<div class="empty">No members yet.</div>`}</div></div>
    ${(t.overseers||[]).length?`<div class="small muted" style="margin-top:10px">Overseen by ${t.overseers.map(who).map(esc).join(", ")}</div>`:""}`;}
 function gtLog(g){const lead=isLeadOf(g);const Lg=gcol(g,"log").slice().sort((a,b)=>(b.at||"").localeCompare(a.at||""));const canW=inGroup(g);
   return `${canW?`<div class="card" style="margin-bottom:12px"><div class="bd stack"><div class="grid g3"><label class="f">Kind<select class="in" id="glK">${["Meeting minutes","Activity","Decision","Prayer point","Other"].map(x=>`<option>${x}</option>`).join("")}</select></label><label class="f">Date<input class="in" type="date" id="glD" value="${tISO()}"></label></div><label class="f">What happened<textarea class="in" id="glT" placeholder="Minutes, decisions, attendance, follow-ups…"></textarea></label><div id="stg_glog">${stagedHTML("glog")}</div><div style="display:flex;justify-content:space-between;gap:8px">${attachBtn("glog")}${btn("Add to log",`data-glog="${esc(g)}"`,"pri")}</div></div></div>`:""}
@@ -1815,7 +1848,7 @@ P.supportinbox=()=>PH("Support inbox","inbox","Questions and enquiries from memb
  `<div class="card"><div class="rows">${[...S.support].sort((a,b)=>(b.at||"").localeCompare(a.at||"")).map(x=>`<button class="ri ${x.unreadAdmin?"unread":""}" data-support="${esc(x._id)}"><div>${avatar(x._id,36)}</div><div style="min-width:0"><div class="t">${esc(x.name||who(x._id))}</div><div class="m clamp2">${esc(x.last||"")}</div></div><div class="r"><span class="small muted">${ago(x.at)}</span>${x.unreadAdmin?`<span class="dot"></span>`:""}</div></button>`).join("")||`<div class="empty"><b>No enquiries yet</b>Members use the round help button to send questions here.</div>`}</div></div>`;
 
 // ---------- people & sign-ins (admin) ----------
-P.peopleadmin=()=>{const pend=S.profiles.filter(p=>!S.members.some(m=>m._id===p._id)&&p._id!==settings.ownerUid&&!p.hidden).sort((a,b)=>(b.at||"").localeCompare(a.at||""));
+P.peopleadmin=()=>{const pend=S.profiles.filter(p=>!S.members.some(m=>m._id===p._id)&&p._id!==settings.ownerUid&&!p.hidden&&!reqExpired(p)).sort((a,b)=>(b.at||"").localeCompare(a.at||""));
   const R=S.members.map(m=>({...m,_n:who(m._id),_e:prof(m._id).email||""}));
   const acc=m=>(m.rid||[]).includes("admin")?"Admin":(m.rid||[]).includes("group-lead")?"Group lead":"Member";
   return PH("People & sign-ins","users","Approve new sign-ins, set admins and roles, place people in groups, help with passwords")+
@@ -2732,15 +2765,14 @@ const OFFICES=[
  {k:"pmt",gid:"project-management-team",name:"Project Management Team",key:"PMT",icon:"box",tag:"Projects, milestones, budgets and delivery"},
  {k:"pas",gid:"pastorate",name:"Pastorate",key:"PAS",icon:"church",tag:"Oversight of the whole church family"}];
 const officeByK=k=>OFFICES.find(o=>o.k===k);const officeByG=g=>OFFICES.find(o=>o.gid===g);
-const inOffice=o=>!!o&&(isAdminUser()||myGroups().includes(o.gid));
+const inOffice=o=>!!o&&(myGroups().includes(o.gid)||isOverseer(o.gid)||bgActive(o.gid,"office"));
 const TSTAT=["To do","In progress","In review","Done"];const TPRI=["Highest","High","Medium","Low"];const PRI_CLS={Highest:"p-crit",High:"p-warn",Medium:"p-info",Low:"p-off"};
 const PRI_IC={Highest:"⇈",High:"↑",Medium:"=",Low:"↓"};
 const keyFor=g=>{const o=officeByG(g);if(o)return o.key;const nm=(groupById(g)||{}).name||g;return (nm.replace(/[^A-Za-z ]/g,"").split(/\s+/).filter(Boolean).map(w=>w[0]).join("").slice(0,3)||nm.slice(0,3)).toUpperCase();};
 // ---------- subscriptions ----------
 function tasksSub(){if(!db||!me.id)return;const c=db.collection("tasks");const q=(k,f,v)=>sub(k,c.where?c.where(f,"==",v):c,snap=>{G[k]=rows(snap).filter(x=>x[f]===v);rerender();});
-  if(isAdminUser()||isPastor())sub("tk:all",c,snap=>{G["tk:all"]=rows(snap);rerender();});
-  else{for(const o of OFFICES)if(inOffice(o))q("tk:o:"+o.gid,"ogid",o.gid);for(const g of mySpaces())q("tk:g:"+g,"gid",g);q("tk:me","assignee",me.id);}
-  const m=db.collection("minutes");for(const o of OFFICES)if(inOffice(o)||isPastor())sub("mn:"+o.gid,m.where?m.where("ogid","==",o.gid):m,snap=>{G["mn:"+o.gid]=rows(snap).filter(x=>x.ogid===o.gid);rerender();});}
+  {for(const o of OFFICES)if(inOffice(o))q("tk:o:"+o.gid,"ogid",o.gid);for(const g of mySpaces().filter(g=>privOK(g,"tasks")))q("tk:g:"+g,"gid",g);q("tk:me","assignee",me.id);}
+  const m=db.collection("minutes");for(const o of OFFICES)if(inOffice(o))sub("mn:"+o.gid,m.where?m.where("ogid","==",o.gid):m,snap=>{G["mn:"+o.gid]=rows(snap).filter(x=>x.ogid===o.gid);rerender();});}
 const allTasks=()=>{const mp=new Map();for(const[k,v]of Object.entries(G))if(k.startsWith("tk:"))for(const t of v||[]){const o2=mp.get(t._id);if(!o2||(t.upd||t.at||"")>=(o2.upd||o2.at||""))mp.set(t._id,t);}return [...mp.values()];};
 const minutesOf=o=>(G["mn:"+o.gid]||[]).slice().sort((a,b)=>(b.date||"").localeCompare(a.date||""));
 const canEditTask=t=>isAdminUser()||myGroups().includes(t.ogid)||myGroups().includes(t.gid)||isOverseer(t.gid);
@@ -2994,7 +3026,7 @@ document.addEventListener("change",e=>{if(e.target.id==="remPref")setProfField({
 function mtabs(){const a=AREAS.find(x=>x.k===route.area);if(!a)return "";const ps=areaPages(a).filter(p=>p[5]!=="hide");if(ps.length<2||!ps.some(p=>p[0]===route.page))return "";
   return `<nav class="mtabs" aria-label="${esc(a.label)} pages">${ps.map(p=>{const b=badgeFor(p[0]);return `<button class="mtab ${route.page===p[0]?"on":""}" data-page="${p[0]}">${p[1]}${b?`<span class="ct">${b}</span>`:""}</button>`;}).join("")}</nav>`;}
 const canSignins=()=>isAdminUser()||canE("settings");
-const pendSignins=()=>canSignins()?S.profiles.filter(p=>!S.members.some(m=>m._id===p._id)&&p._id!==settings.ownerUid&&!p.hidden&&p.onboarded):[];
+const pendSignins=()=>canSignins()?S.profiles.filter(p=>!S.members.some(m=>m._id===p._id)&&p._id!==settings.ownerUid&&!p.hidden&&p.onboarded&&!reqExpired(p)):[];
 {const _ai=approvalItems;approvalItems=function(){const out=_ai();for(const p of pendSignins())out.push({key:`s|${p._id}`,at:p.at,who:p._id,title:`${p.name||"New person"} wants to sign in`,sub:`New sign-in · ${[p.email,p.phone,p.kind,(p.req||[]).length?"wants to join "+(p.req||[]).map(groupName).join(", "):""].filter(Boolean).join(" · ")}`,kind:"s"});return out.sort((a,b)=>(b.at||"").localeCompare(a.at||""));};}
 {const _ea=extraApprovals;extraApprovals=function(){return _ea()+pendSignins().length;};}
 {const _ra=runApproval;runApproval=async function(key,yes,note){const[k,a]=key.split("|");if(k==="s"){if(yes){await H8.paok({dataset:{paok:a}});return true;}await H8.pahide({dataset:{pahide:a}});return true;}return _ra(key,yes,note);};}
@@ -3528,7 +3560,7 @@ function roField([k,label,type="text",wide],rec){const v=rec[k]??"";let out;
 // ---------- contact details: masked unless allowed ----------
 const CKEYS=["phone","email","address"];
 const canSeeAllContacts=()=>isAdminUser()||lvl("seecontacts")>=1;
-const maskPhone=p=>{const d=String(p||"").replace(/\D/g,"");return d.length>5?d.slice(0,3)+"•••••"+d.slice(-2):"•••••";};
+const maskPhone=p=>{const d=String(p||"").replace(/\D/g,"");if(/^234\d{10}$/.test(d))return "+234"+d.slice(3,6)+"•••••"+d.slice(-2);return d.length>5?d.slice(0,3)+"•••••"+d.slice(-2):"•••••";};
 const maskEmail=e=>{const[a,b]=String(e||"").split("@");return b?(a||"?")[0]+"•••@"+b:"•••";};
 {const _sp=splitProf;splitProf=function(d){const[pub,pv]=_sp(d);if(pv.phone)pub.phoneHint=maskPhone(pv.phone);if(pv.email)pub.emailHint=maskEmail(pv.email);if(pv.address||pv.area)pub.addrHint="Hidden";return[pub,pv];};}
 function reqBtn(u){if(!u||u===me.id||!S.members.some(m=>m._id===u))return "";const r=(G.creqOut||[]).find(x=>x.to===u);
@@ -3604,7 +3636,7 @@ const groupAud=g=>[...new Set([...groupMembers(g),...(((groupById(g)||{}).overse
   return h;};}
 // church noticeboard
 P.notices=()=>{const N=visibleNotices().slice().sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||(b.at||"").localeCompare(a.at||""));
-  return PH("Noticeboard","bell","Announcements for the whole church family or a single group",canE("notices")?addBtn("notices","notices","Post a notice"):can("suggestnotice")?btn(`${ic("plus")}Suggest a notice`,'data-suggestnotice="1"',"pri"):"")+
+  return PH("Noticeboard","bell","Announcements for the whole church family or a single group",canE("notices")&&!(onProb(me.id)&&!isSA())?addBtn("notices","notices","Post a notice"):can("suggestnotice")?btn(`${ic("plus")}Suggest a notice`,'data-suggestnotice="1"',"pri"):"")+
   `<div class="grid g3">${N.map(x=>{markSeen("n:"+x._id,x.byId);const exp=x.expires&&x.expires<tISO();const txt=`*${x.title}*\n${x.body||""}\n\n— ${settings.churchSub}`;return `<div class="card" style="${exp?"opacity:.6":""}"><div class="hd"><h2>${esc(x.title)}</h2><div class="chips">${x.pinned?pill("Pinned","p-brand"):""}${pill(x.audience||"Everyone","p-info")}${exp?pill("Expired","p-off"):""}</div></div><div class="bd">${imgHTML(x.img,"postimg")}<div style="white-space:pre-wrap">${esc(x.body||"")}</div><div class="small muted" style="margin-top:10px">${x.at?fmtS(x.at.slice(0,10)):""}${x.byId?" · "+esc(who(x.byId)):""} ${seenLine("n:"+x._id,noticeAud(x),x.byId||"")}</div><div class="chips" style="margin-top:10px"><a class="btn sm ghost" href="${waShare(txt)}" target="_blank" rel="noopener">${ic("wa")}Share on WhatsApp</a>${canE("notices")?`<button class="btn sm ghost" data-open="notices|${esc(x._id)}">${ic("edit")}Edit</button>`:""}</div></div></div>`;}).join("")||`<div class="card"><div class="empty"><b>No notices yet</b>${canE("notices")?"Post reminders, schedule changes or words of encouragement for a team or everyone.":"Church notices will appear here."}</div></div>`}</div>`;};
 {const _sn=H8.suggestnotice;H8.suggestnotice=t=>{if(!can("suggestnotice")&&!canE("notices")){toast("Suggesting notices is for Secretariat, group leads and the Pastorate");return;}return _sn(t);};}
 // group notices
@@ -3909,6 +3941,505 @@ document.addEventListener("change",e=>{if(e.target.id==="monDone"){LS.set("monDo
     match /flags/{id} { allow read, update, delete: if sa(); allow create: if approved() && mine('by'); }
     match /monitor/{id} { allow read, write: if sa(); }
     match /loginfails/{id} { allow read: if sa(); }`);
+  return s;};}
+
+// ================= HOH Family v11: sign-up safety, probation, input checks, pastorate titles =================
+Object.assign(DEF_SETTINGS,{signup:{allow:["gmail.com","googlemail.com","yahoo.com","ymail.com"],block:[]},probDays:7,sensitive:["pastorate","secretariat","key-programs-committee"],
+  pastorTitles:["Assembly Pastor","Assistant Pastor (Programmes)","Assistant Pastor (Outreach)","Assistant Pastor (Biblical Studies)","Assistant Pastor (Administration)","Assistant Pastor (Secretariat)"]});
+for(const k of ["signup","probDays","sensitive","pastorTitles"])if(settings[k]==null)settings[k]=JSON.parse(JSON.stringify(DEF_SETTINGS[k]));
+Object.assign(ICP,{check2:'<path d="M20 6 9 17l-5-5"/>',flag2:'<path d="M4 22V4h12l-2 4 2 4H4"/>'});
+{const st=AREAS.find(a=>a.k==="settings");const i=st.pages.findIndex(p=>p[0]==="monitor");st.pages.splice(i,0,["safety","Sign-up & Safety","shield","_sa","Security & data"]);}
+
+// ---------- input checks ----------
+const PHONE_RE=/^\+234[789][01]\d{8}$/;
+const normPhone=p=>{let x=String(p||"").replace(/[\s\-().]/g,"");if(!x)return "";if(/^0[789][01]\d{8}$/.test(x))x="+234"+x.slice(1);else if(/^234[789][01]\d{8}$/.test(x))x="+"+x;else if(/^[789][01]\d{8}$/.test(x))x="+234"+x;return x;};
+const NAME_RE=/^[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ .'\-]{1,59}$/;
+const EMAIL_RE=/^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
+const CODE_RE=/^[A-Za-z0-9\-\/]+$/;
+const TYPO_DOMAINS={"yoho.com":"yahoo.com","yahooo.com":"yahoo.com","yaho.com":"yahoo.com","yhoo.com":"yahoo.com","gmial.com":"gmail.com","gmai.com":"gmail.com","gmal.com":"gmail.com","gnail.com":"gmail.com","gamil.com":"gmail.com","gmail.co":"gmail.com","hotmial.com":"hotmail.com","hotmai.com":"hotmail.com","outlok.com":"outlook.com","outloo.com":"outlook.com"};
+const BAD_CHARS=/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F​-‏‪-‮⁦-⁩﻿]/g;
+const SKIP_SAN=new Set(["img","photo","sig","bgimg","logo","data","lines"]);
+function sanitize(o,depth=0){if(depth>4||!o||typeof o!=="object")return o;const r=Array.isArray(o)?[]:{};
+  for(const[k,v]of Object.entries(o)){if(typeof v==="string")r[k]=SKIP_SAN.has(k)||v.startsWith("data:image/")?v:v.replace(BAD_CHARS,"").slice(0,20000);else if(v&&typeof v==="object")r[k]=SKIP_SAN.has(k)?v:sanitize(v,depth+1);else r[k]=v;}return r;}
+const nameOK=s=>NAME_RE.test(String(s||"").trim())&&String(s).trim().split(/\s+/).filter(w=>/[A-Za-zÀ-ÿ]{2,}/.test(w)).length>=2;
+function checkRecord(coll,d){
+  if(d.phone!=null&&d.phone!==""){const p=normPhone(d.phone);if(!PHONE_RE.test(p))return "Phone numbers must look like +2348157316687 (Nigerian number, 13 characters).";d.phone=p;}
+  if(d.email!=null&&d.email!==""&&coll!=="profiles"){if(!EMAIL_RE.test(String(d.email).trim()))return "That email address doesn't look right – it needs an @ and a domain, e.g. name@gmail.com.";d.email=String(d.email).trim().toLowerCase();}
+  if((coll==="profiles"||coll==="people")&&d.name!=null&&!nameOK(d.name))return "Please enter a real first and last name using letters only (e.g. Ada Okafor).";
+  if(coll==="newcomers"&&d.name&&!NAME_RE.test(String(d.name).trim()))return "Names can only use letters, spaces, hyphens and apostrophes.";
+  for(const k of ["no","code"])if(d[k]!=null&&d[k]!==""&&!CODE_RE.test(String(d[k])))return "Codes and card numbers can only use letters and numbers.";
+  for(const[k,v]of Object.entries(d))if(/^(amount|qty|count|cost|budget|spend|spent|price|units|litres|hours)$/.test(k)&&v!==""&&v!=null&&(isNaN(Number(v))||Number(v)<0))return `“${k}” must be a number (0 or more).`;
+  return "";}
+const CHECK_COLLS=new Set(["profiles","people","newcomers","contacts","libcards","private","roster","rosters"]);
+{const _sv=save;save=async function(coll,id,data,o){if(data&&typeof data==="object"){data=sanitize(data);const base=coll.split("/").pop();if(CHECK_COLLS.has(base)||SA_PATH.test(coll)){const err=checkRecord(base,data);if(err){toast(err);return false;}}}return _sv(coll,id,data,o);};}
+{const _sd=setDoc;setDoc=async function(path,data){if(data&&typeof data==="object"){data=sanitize(data);const base=path.split("/").slice(-2)[0];if(CHECK_COLLS.has(base)){const err=checkRecord(base,data);if(err){toast(err);return false;}}
+    if(base==="profiles"&&path.endsWith("/"+me.id)&&data.onboarded){data.provider=data.provider||me.provider||"";data.ev=me.provider==="google.com"||!!(window.HOH_WEB&&window.HOH_WEB.verified);}}return _sd(path,data);};}
+{const _ad=addDoc;addDoc=async function(path,data){return _ad(path,data&&typeof data==="object"?sanitize(data):data);};}
+// phone inputs: show the expected format
+document.addEventListener("focusin",e=>{const t=e.target;if(t&&t.matches&&t.matches("#obPhone,#pfPhone,#f_phone")){t.setAttribute("inputmode","tel");if(!t.placeholder)t.placeholder="+2348012345678";}});
+document.addEventListener("blur",e=>{const t=e.target;if(t&&t.matches&&t.matches("#obPhone,#pfPhone,#f_phone")&&t.value){const p=normPhone(t.value);if(PHONE_RE.test(p))t.value=p;}},true);
+// onboarding / profile: check before saving
+{const _ob=H8.obsave;H8.obsave=async t=>{const n2=document.getElementById("obName"),ph=document.getElementById("obPhone");if(n2&&!nameOK(n2.value)){toast("Please enter your real first and last name using letters only.");return;}
+  if(ph){const p=normPhone(ph.value);if(!PHONE_RE.test(p)){toast("Phone must be a Nigerian number like +2348157316687.");return;}ph.value=p;}
+  const req=readMulti("obGroups").filter(g=>(settings.sensitive||[]).includes(g));if(req.length)toast(`Joining ${req.map(groupName).join(", ")} needs an in-person confirmation by a leader.`);return _ob(t);};}
+{const _pf=H8.pfsave;H8.pfsave=async t=>{const n2=document.getElementById("pfName"),ph=document.getElementById("pfPhone");if(n2&&!nameOK(n2.value)){toast("Please enter your real first and last name using letters only.");return;}
+  if(ph&&ph.value){const p=normPhone(ph.value);if(!PHONE_RE.test(p)){toast("Phone must be a Nigerian number like +2348157316687.");return;}ph.value=p;}return _pf(t);};}
+
+// ---------- pending sign-ins expire after 14 days ----------
+function reqExpired(p){return !!p.at&&Date.now()-Date.parse(p.at)>14*864e5;}
+
+// ---------- probation, verified tick, pastorate titles ----------
+const memberOf=u=>S.members.find(m=>m._id===u)||{};
+const onProb=u=>{const m=memberOf(u);return n(m.probMs)>Date.now();};
+const probLeft=u=>Math.max(1,Math.ceil((n(memberOf(u).probMs)-Date.now())/864e5));
+const isVerified=u=>["In person","Vouched"].includes(memberOf(u).verifyMethod);
+const pTitles=()=>(settings.pastorTitles&&settings.pastorTitles.length?settings.pastorTitles:DEF_SETTINGS.pastorTitles);
+const seniorTitle=()=>pTitles()[0];
+const titleOf=u=>memberOf(u).ptitle||"";
+const assemblyPastor=()=>(S.members.find(m=>m.ptitle&&m.ptitle===seniorTitle()&&!m.suspended)||{})._id||"";
+const isAssemblyPastor=()=>!!me.id&&titleOf(me.id)===seniorTitle();
+function badges(u){if(!u)return "";return `${isVerified(u)?`<span class="vtick" title="Verified – confirmed in person">${ic("check2")}</span>`:""}${onProb(u)?`<span class="pill p-warn newb" title="New account – on probation for ${probLeft(u)} more day(s)">New</span>`:""}`;}
+const whoT=u=>esc(who(u))+(titleOf(u)?` <span class="small muted">· ${esc(titleOf(u))}</span>`:"");
+function probBlock(what){if(isSA()||!me.id||!onProb(me.id))return false;toast(`New accounts can ${what} after probation ends (in ${probLeft(me.id)} day${probLeft(me.id)===1?"":"s"}).`);return true;}
+{const _c=H8.campnew;if(_c)H8.campnew=t=>{if(probBlock("send mass messages"))return;return _c(t);};}
+{const _p=H8.postedit;if(_p)H8.postedit=t=>{if(!t.dataset.postedit&&probBlock("make Welcome posts"))return;return _p(t);};}
+{const _n=H8.new;if(_n)H8.new=t=>{if(t.dataset.new==="notices"&&probBlock("post church notices"))return;return _n(t);};}
+{const _s=H8.suggestnotice;H8.suggestnotice=t=>{if(probBlock("suggest church notices"))return;return _s(t);};}
+{const _cr=H8.creq;H8.creq=async t=>{if(!isSA()&&onProb(me.id)&&(G.creqOut||[]).filter(r=>(r.at||"").slice(0,10)===tISO()).length>=3){toast("New accounts can ask for up to 3 contact details a day.");return;}return _cr(t);};}
+
+// chat bubbles: badges, pastor titles and a Report button
+chatMsgHTML=function(g,m,canDel){const mine=m.by===me.id;return `<div class="msg ${mine?"me":""}">${mine?"":avatar(m.by,28)}<div class="bub"><div class="who">${esc(who(m.by))}${badges(m.by)}${titleOf(m.by)?` · ${esc(titleOf(m.by))}`:m.role?` · ${esc(m.role)}`:""} · ${ago(m.at)}${canDel?` <button class="lnk" data-chatdel="${esc(g)}|${esc(m._id)}" aria-label="Delete message">×</button>`:""}${!mine?` <button class="lnk rep" data-report="${esc(g)}|${esc(m._id)}" aria-label="Report message" title="Report this message">${ic("flag2")}</button>`:""}</div>${imgHTML(m.img)}${m.text?`<div class="tx">${esc(m.text)}</div>`:""}${mine?`<div class="tk">${tickHTML(g,m)}</div>`:""}</div></div>`;};
+H8.report=async t=>{const[g,id]=t.dataset.report.split("|");const m=gcol(g,"chat").find(x=>x._id===id);if(!m)return;if(!confirmArm("rp"+id)){toast("Tap the flag again to report this message to the Super Admin");return;}
+  await raiseFlag("report",`Reported message in ${groupName(g)} chat`,`${who(m.by)}: ${m.text||"(picture)"}`,{where:`teams/${g}/chat`,about:m.by,msgId:id});toast("Reported – thank you. Only this message is shared with the Super Admin.");};
+
+// ---------- approving a sign-in: warning signs + how you confirmed ----------
+const normName=s=>String(s||"").toLowerCase().replace(/\b(pst|pastor|bro|sis|dcn|dcns|deacon|deaconess|mr|mrs|miss|dr|evang|elder)\b\.?/g,"").replace(/[^a-z ]/g,"").split(/\s+/).filter(Boolean).sort().join(" ");
+function trustSignals(u){const p=prof(u);const out=[];const email=String(p.email||"").toLowerCase();const dom=email.split("@")[1]||"";
+  out.push(p.provider==="google.com"?["ok","Signed in with Google (verified email)"]:p.ev?["ok","Email verified"]:["warn","Email not confirmed as verified (older sign-up)"]);
+  const ph=normPhone(p.phone);out.push(p.phone?(PHONE_RE.test(ph)?["ok",`Valid Nigerian number ${ph}`]:["bad",`Phone “${p.phone}” isn't a valid Nigerian number`]):["warn","No phone number visible"]);
+  if(TYPO_DOMAINS[dom])out.push(["bad",`Email uses “${dom}” – looks like a misspelling of ${TYPO_DOMAINS[dom]}`]);
+  const allow=((settings.signup||{}).allow)||[];if(dom&&allow.length&&!allow.includes(dom))out.push(["warn",`Email provider “${dom}” isn't on the allowed list`]);
+  const nn=normName(p.name);if(nn){const same=[...S.members.map(m=>m._id).filter(x=>x!==u&&normName(who(x))===nn).map(x=>who(x)),...(S.people||[]).filter(x=>x.uid!==u&&normName(x.name)===nn&&!S.members.some(m=>m._id===x.uid)).map(x=>x.name+" (register)")];if(same.length)out.push(["bad",`Same name as ${[...new Set(same)].join(", ")}`]);}
+  if(ph){const dup=[...S.members.map(m=>m._id).filter(x=>x!==u&&normPhone(prof(x).phone)===ph).map(x=>who(x)),...(S.people||[]).filter(x=>x.uid!==u&&normPhone(x.phone)===ph).map(x=>x.name+" (register)")];if(dup.length)out.push(["bad",`This phone already belongs to ${[...new Set(dup)].join(", ")}`]);}
+  const ss=(G.allsess||[]).filter(s=>s.uid===u).sort((a,b)=>(a.first||"").localeCompare(b.first||""));const s0=ss[0];
+  if(s0){const loc=[s0.city,s0.country].filter(Boolean).join(", ");out.push([!s0.country||/nigeria|^ng$/i.test(s0.country)?"ok":"bad",`📍 Request came from ${loc||"an unknown location"}${s0.ip?` · IP ${s0.ip}`:""} · ${s0.label||"device"}`]);
+    const shared=[...new Set((G.allsess||[]).filter(s=>s.uid!==u&&ss.some(x=>x.deviceId&&x.deviceId===s.deviceId)).map(s=>s.uid))];if(shared.length)out.push(["warn",`Same phone/computer already used by ${shared.map(who).join(", ")}`]);}
+  else out.push(["warn","📍 Location not recorded yet"]);
+  if(p.at)out.push([Date.now()-Date.parse(p.at)<36e5?"warn":"ok",`Signed up ${ago(p.at)}`]);
+  const sens=(p.req||[]).filter(g=>(settings.sensitive||[]).includes(g));if(sens.length)out.push(["warn",`Wants to join ${sens.map(groupName).join(", ")} – that will need an in-person confirmation note`]);
+  return out;}
+function trustHTML(sig){return `<div class="trust">${sig.map(([k,t])=>`<div class="ts ${k}"><span>${k==="ok"?"✓":k==="bad"?"⚠":"!"}</span>${esc(t)}</div>`).join("")}</div>`;}
+H8.paok=async t=>{const u=t.dataset.paok;const p=prof(u);if(isAdminUser())sub("c:sess",db.collection("sessions"),snap=>{G.allsess=rows(snap);rerender();});
+  const sig=trustSignals(u);const bad=sig.filter(s=>s[0]==="bad").length;
+  sheet({title:`Approve ${who(u)}?`,body:`<div style="display:flex;gap:12px;align-items:center">${avatar(u,48)}<div><b>${esc(p.name||who(u))}</b><div class="small muted">${esc(p.email||"")}</div></div></div>${trustHTML(sig)}
+   ${bad?`<div class="note-warn">${ic("alert")}<div><b>${bad} warning sign${bad===1?"":"s"}.</b> Please confirm this is the real person before approving – a copied name or phone is the usual way impostors get in.</div></div>`:""}
+   <div class="f">How did you confirm it's really them? *<div class="chips" id="pvM">${["In person","Phone call","Video call","Vouched"].map(x=>`<label class="chk"><input type="radio" name="pvm" value="${x}"> ${x==="Vouched"?"Vouched for by a member":x}</label>`).join("")}</div></div>
+   <label class="f" id="pvVw" hidden>Who vouched for them?<select class="in" id="pvV"><option value=""></option>${S.members.filter(m=>m._id!==u&&!onProb(m._id)).map(m=>[m._id,who(m._id)]).sort((a,b)=>a[1].localeCompare(b[1])).map(([id,nm])=>`<option value="${esc(id)}">${esc(nm)}</option>`).join("")}</select></label>
+   <label class="f">Note ${bad?"* (required because of the warnings)":"(optional)"}<textarea class="in" id="pvN" placeholder="e.g. Met her after service on Sunday; she's in the choir"></textarea></label>
+   <div class="small muted">They'll be on probation for ${n(settings.probDays)||7} days: a “New” badge, no mass messages, posts or notices, and limited contact requests.</div>`,
+   foot:`<span style="flex:1"></span><button class="btn ghost" data-close="1">Cancel</button><button class="btn pri" id="pvGo">Approve</button>`});
+  document.querySelectorAll('input[name="pvm"]').forEach(r=>r.onchange=()=>{document.getElementById("pvVw").hidden=r.value!=="Vouched"||!r.checked;});
+  document.getElementById("pvGo").onclick=async()=>{const mth=(document.querySelector('input[name="pvm"]:checked')||{}).value;const vouch=document.getElementById("pvV").value;const note=document.getElementById("pvN").value.trim();
+    if(!mth){toast("Choose how you confirmed it's them");return;}if(mth==="Vouched"&&!vouch){toast("Choose who vouched for them");return;}if(bad&&note.length<5){toast("Add a short note – there are warning signs");return;}
+    const days=Math.min(30,Math.max(1,n(settings.probDays)||7));const probMs=Date.now()+days*864e5;
+    const d={rid:["member"],groups:[],gchg:"",verifyMethod:mth,vouch:vouch||"",verifyNote:note,verifiedBy:me.id,verifiedAt:nowISO(),probMs,probUntil:new Date(probMs).toISOString()};
+    if(!await save("members",u,d,{quiet:true}))return;
+    if(canE("repository")){const ex=S.people.find(x=>x._id===u)||{};const pd2={...ex,name:p.name||"",phone:p.phone||"",email:p.email||"",gender:p.gender||"",bday:p.bday||"",address:p.area||"",kind:p.kind||(p.worker?"Worker":"Member"),marital:p.marital||"",groups:(p.req||[]).map(groupName).join(", "),status:"Active",joined:ex.joined||tISO(),uid:u};delete pd2._id;delete pd2._hid;save("people",u,pd2,{quiet:true,log:false});}
+    notify([u],`Welcome to ${FAMILY}`,"Your sign-in has been approved. Your group requests now go to the group leads.","profile");logAct("approved sign-in","members",u,`${who(u)} · ${mth}${vouch?" by "+who(vouch):""}`);closeLayer();toast("Approved");};};
+{const _ra=runApproval;runApproval=async function(key,yes,note){if(key.startsWith("s|")&&yes){H8.paok({dataset:{paok:key.split("|")[1]}});return false;}return _ra(key,yes,note);};}
+
+// ---------- sensitive groups: in-person confirmation ----------
+const isSensitive=g=>(settings.sensitive||[]).includes(g);
+{const _fd=finalDecide;finalDecide=async function(g,u,yes,note=""){if(yes&&isSensitive(g)){if(onProb(u)){toast(`${who(u)} is on probation – they can join ${groupName(g)} in ${probLeft(u)} day(s).`);return false;}
+    const nt=prompt(`${groupName(g)} is a sensitive group. Write how ${who(u)} was confirmed in person (who, when, where):`);if(!nt||nt.trim().length<8){toast("An in-person confirmation note is required");return false;}
+    const ok=await _fd(g,u,yes,note);if(ok){try{await db.doc(`teams/${g}/crew/${u}`).set({finalNote:nt.trim().slice(0,400)},{merge:true});}catch(e){}logAct("approved into sensitive group",`teams/${g}`,u,`${who(u)} · ${nt.trim().slice(0,120)}`);}return ok;}
+  return _fd(g,u,yes,note);};}
+document.addEventListener("change",async e=>{const t=e.target;if(!t.dataset||!t.dataset.gsub||!["Treasurer","Secretary"].includes(t.value))return;const[g,u]=t.dataset.gsub.split("|");
+  const nt=prompt(`Making ${who(u)} ${t.value} of ${groupName(g)}. Write how they were confirmed in person (who, when, where):`);
+  if(!nt||nt.trim().length<8){e.stopImmediatePropagation();toast("An in-person confirmation note is required for Treasurer and Secretary");render();return;}
+  setTimeout(()=>{db.doc(`teams/${g}/crew/${u}`).set({subNote:nt.trim().slice(0,400),subNoteBy:me.id},{merge:true}).catch(()=>{});logAct(`made ${t.value}`,`teams/${g}`,u,nt.trim().slice(0,120));},1500);});
+
+// ---------- People & Sign-ins: pastorate title, probation ----------
+{const _pe=H8.paedit;H8.paedit=t=>{_pe(t);const u=t.dataset.paedit;const m=memberOf(u);const body=document.querySelector(".sheet .body");if(!body)return;
+  const info=[m.verifyMethod?`Confirmed: ${m.verifyMethod}${m.vouch?" by "+who(m.vouch):""}${m.verifiedBy?" · approved by "+who(m.verifiedBy):""}`:"",onProb(u)?`On probation for ${probLeft(u)} more day(s)`:""].filter(Boolean);
+  if(info.length)body.insertAdjacentHTML("afterbegin",`<div class="small muted">${info.map(esc).join(" · ")}</div>`);
+  if(!isSA())return;const inP=(m.groups||[]).includes("pastorate");
+  const adm=document.getElementById("paAdm");const anchor=adm?adm.closest("fieldset"):body.lastElementChild;
+  anchor.insertAdjacentHTML("beforeend",`${inP||m.ptitle?`<label class="f wide">Pastorate title<select class="in" id="paPT"><option value="">—</option>${pTitles().map(x=>`<option ${m.ptitle===x?"selected":""}>${esc(x)}</option>`).join("")}</select></label>`:""}${onProb(u)?`<button class="btn sm ghost wide" data-endprob="${esc(u)}" style="justify-self:start">${ic("check2")}End probation now</button>`:""}`);
+  const sv=document.getElementById("paSave");const orig=sv.onclick;sv.onclick=async e=>{const pt=document.getElementById("paPT");const mm=S.members.find(x=>x._id===u);if(pt&&mm){if(pt.value&&pt.value===seniorTitle()){const cur=assemblyPastor();if(cur&&cur!==u){toast(`${who(cur)} already holds “${seniorTitle()}”. Remove it from them first.`);return;}}mm.ptitle=pt.value;}return orig(e);};};}
+H8.endprob=async t=>{const u=t.dataset.endprob;if(!isSA())return;const m=S.members.find(x=>x._id===u);if(!m)return;const d={...m,probMs:0,probUntil:"",probEndedBy:me.id};delete d._id;if(await save("members",u,d,{quiet:true})){logAct("ended probation","members",u,who(u));notify([u],"Your probation has ended","You now have full access for your roles.","welcome");toast("Probation ended");closeLayer();}};
+
+// ---------- Sign-up & Safety settings (Super Admins) ----------
+P.safety=()=>{if(!isSA())return PH("Sign-up & Safety","shield","For Super Admins only");const sg=settings.signup||{allow:[],block:[]};
+  return PH("Sign-up & Safety","shield","Who can sign up, probation for new accounts, sensitive groups and pastorate titles")+
+  `<div class="grid g2" style="align-items:start"><div class="card"><div class="hd"><h2>Email providers for new sign-ups</h2></div><div class="bd stack">
+    <div class="small muted">Only addresses from the allowed list can create new accounts (existing members keep their access). Google sign-in is checked the same way.</div>
+    <label class="f">Allowed (one per line)<textarea class="in" id="sfA" style="min-height:110px">${esc((sg.allow||[]).join("\n"))}</textarea></label>
+    <label class="f">Always blocked (one per line)<textarea class="in" id="sfB" style="min-height:70px" placeholder="e.g. mailinator.com">${esc((sg.block||[]).join("\n"))}</textarea></label></div></div>
+   <div class="stack"><div class="card"><div class="hd"><h2>Probation for new accounts</h2></div><div class="bd stack"><label class="f">Days (1–30)<input class="in" type="number" min="1" max="30" id="sfP" value="${esc(n(settings.probDays)||7)}"></label>
+    <div class="small muted">During probation: a “New” badge, no mass messages, Welcome posts or church notices, at most 3 contact requests a day, and no sensitive groups. End it early for a person in People & Sign-ins.</div></div></div>
+   <div class="card"><div class="hd"><h2>Sensitive groups</h2><span class="n">need an in-person note to join</span></div><div class="bd">${multiHTML("sfS",[...S.teams].sort(byFull).map(t=>[t._id,fullName(t)]),settings.sensitive||[])}<div class="small muted" style="margin-top:6px">Making someone Treasurer or Secretary of any group also needs a note.</div></div></div></div>
+   <div class="card"><div class="hd"><h2>Pastorate titles</h2><span class="n">the first title is the senior pastor</span></div><div class="bd stack"><label class="f">One per line<textarea class="in" id="sfT" style="min-height:150px">${esc(pTitles().join("\n"))}</textarea></label>
+    <div class="small muted">The first title (now “${esc(seniorTitle())}”) approves temporary access for groups that have no overseer yet, and can ask for temporary access like a Super Admin. Give titles in People & Sign-ins.</div>
+    <div class="stack small">${S.members.filter(m=>m.ptitle).map(m=>`<div><b>${esc(m.ptitle)}</b> – ${esc(who(m._id))}</div>`).join("")||`<span class="muted">No titles given yet.</span>`}</div></div></div></div>
+  <div style="margin-top:12px"><button class="btn pri" data-sfsave="1">Save</button></div>`;};
+H8.sfsave=async()=>{const lines=id=>[...new Set(document.getElementById(id).value.split(/\n|,/).map(x=>x.trim().toLowerCase()).filter(Boolean))];const allow=lines("sfA"),block=lines("sfB");
+  if(allow.some(d=>!/^[a-z0-9.\-]+\.[a-z]{2,}$/.test(d))||block.some(d=>!/^[a-z0-9.\-]+\.[a-z]{2,}$/.test(d))){toast("Each provider must look like gmail.com");return;}
+  const days=Math.round(n(document.getElementById("sfP").value));if(days<1||days>30){toast("Probation must be between 1 and 30 days");return;}
+  const titles=[...new Set(document.getElementById("sfT").value.split("\n").map(x=>x.trim().replace(BAD_CHARS,"")).filter(Boolean))].slice(0,20);if(!titles.length){toast("Keep at least one pastorate title");return;}
+  await saveSettings({signup:{allow,block},probDays:days,sensitive:readMulti("sfS"),pastorTitles:titles},"Saved");
+  try{await db.doc("public/signup").set({allow,block,at:nowISO()});}catch(e){toast(errMsg(e));}logAct("updated sign-up & safety","settings","main",`allow ${allow.join(", ")}`);};
+// keep the public sign-up list in step (Super Admin's app does it)
+let suT=null;{const _sf=syncFamily;syncFamily=function(){_sf();if(isSA()&&dbWritable&&(loaded&1)&&!suT){suT=setTimeout(async()=>{try{const s=await db.doc("public/signup").get();const sg=settings.signup||DEF_SETTINGS.signup;if(!s.exists||canon({allow:s.data().allow||[],block:s.data().block||[]})!==canon({allow:sg.allow||[],block:sg.block||[]}))await db.doc("public/signup").set({allow:sg.allow||[],block:sg.block||[],at:nowISO()});}catch(e){}},4000);}};}
+
+// ---------- admins confirm it's them again after 12 hours away from admin pages ----------
+{const _r=render;render=function(){if(route.area==="settings"&&!["profile","appearance"].includes(route.page)&&isAdminUser()&&G.secq&&me.id&&!needsOnboarding()){const k="admchk:"+me.id;if(Date.now()-n(LS.get(k,0))>12*36e5){navHTML();const el=document.getElementById("main");el.__html=null;
+      el.innerHTML=`<div class="boot"><div class="card" style="max-width:440px"><div class="bd stack" style="text-align:center">${ic("lock")}<h2 style="margin:0">Confirm it's you</h2><p class="muted" style="margin:0">Admin pages ask for one of your security answers if you haven't used them for 12 hours.</p><button class="btn pri" data-admchk="1" style="align-self:center">Answer a security question</button></div></div></div>`;return;}}
+  return _r();};}
+H8.admchk=()=>askSecurity(()=>{LS.set("admchk:"+me.id,Date.now());render();});
+{const _gp=goPage;goPage=function(pg,param){const r=_gp(pg,param);if(AREAS.find(a=>a.k==="settings").pages.some(p=>p[0]===pg)&&Date.now()-n(LS.get("admchk:"+me.id,0))<=12*36e5)LS.set("admchk:"+me.id,Date.now());return r;};}
+{const _ss=H8.secsave;H8.secsave=async t=>{const r=await _ss(t);LS.set("admchk:"+me.id,Date.now());return r;};}
+{const _sc=H8.seccheck;H8.seccheck=async t=>{const b=n(LS.get("secfail:"+me.id,0));await _sc(t);if(n(LS.get("secfail:"+me.id,0))===0&&b>=0&&LS.get("trust:"+me.id,""))LS.set("admchk:"+me.id,Date.now());};}
+
+// one-off tidy by the Super Admin's app: phone numbers in the +234 format, so people can keep updating their own details
+let v11Mig=false;{const _sf=syncFamily;syncFamily=function(){_sf();if(isSA()&&dbWritable&&(loaded&1)&&!v11Mig&&!needsOnboarding()){v11Mig=true;setTimeout(async()=>{let c=0;
+  for(const[u,pv]of Object.entries(G.priv||{})){if(!pv.phone||PHONE_RE.test(pv.phone))continue;const p=normPhone(pv.phone);if(!PHONE_RE.test(p))continue;try{await db.doc(`private/${u}`).set({phone:p},{merge:true});c++;}catch(e){}}
+  for(const[id,pv]of Object.entries(G.ppriv||{})){if(!pv.phone||PHONE_RE.test(pv.phone))continue;const p=normPhone(pv.phone);if(!PHONE_RE.test(p))continue;try{await db.doc(`peoplepriv/${id}`).set({phone:p},{merge:true});c++;}catch(e){}}
+  if(c)logAct("tidied phone numbers to +234 format","private","",String(c));},9000);}};}
+
+// ================= HOH Family v11: every group keeps its own privacy; temporary ("break-glass") access =================
+const PRIV_TABS=["chat","notices","tasks","calendar","dues","finance","inventory","log"];
+const TAB_LBL={chat:"Chat",notices:"Notices",tasks:"Tasks",calendar:"Calendar",dues:"Dues",finance:"Finance",inventory:"Inventory",log:"Log",office:"Office (tasks & minutes)"};
+const PRIV_SUB={chat:"chat",chatreads:"chat",log:"log",events:"calendar",inventory:"inventory",finance:"finance",dues:"dues",duespay:"dues",duesplan:"dues",notices:"notices"};
+const realLead=g=>{const t=groupById(g)||{};return (t.leads||[]).includes(me.id)||(!!t.parent&&(((groupById(t.parent)||{}).leads)||[]).includes(me.id));};
+const realOfficer=g=>realLead(g)||["Treasurer","Secretary"].includes(myCrew(g).sub);
+const privMember=g=>myGroups().includes(g)||isOverseer(g)||realLead(g);
+const bgDocs=()=>G.bgAll||[];
+const bgLive=x=>x&&x.status==="Active"&&n(x.untilMs)>Date.now();
+function bgActive(g,tab){const x=bgDocs().find(d=>d.g===g&&d.uid===me.id&&bgLive(d));return !!x&&(x.tabs||[]).includes(tab);}
+function privOK(g,tab){return privMember(g)||bgActive(g,tab);}
+const canRequestBG=()=>isSA()||isAssemblyPastor();
+{const _gs=gsub;gsub=function(g,k){const t=PRIV_SUB[k];if(t&&!privOK(g,t))return;return _gs(g,k);};}
+function bgSub(){if(!db||!me.id||!(isOwner||myMember()))return;sub("c:bg",db.collection("breakglass"),snap=>{G.bgAll=rows(snap);rerender();});}
+{const _sf=syncFamily;syncFamily=function(){_sf();try{bgSub();}catch(e){}};}
+// expire on time: re-render when an access window closes
+setInterval(()=>{if(bgDocs().some(d=>d.uid===me.id&&d.status==="Active"&&n(d.untilMs)<=Date.now()&&!d.__seenEnd)){bgDocs().forEach(d=>{if(n(d.untilMs)<=Date.now())d.__seenEnd=1;});render();}},30000);
+const durTxt=m=>m<60?`${m} minutes`:m%1440===0?`${m/1440} day${m/1440===1?"":"s"}`:m%60===0?`${m/60} hour${m/60===1?"":"s"}`:`${Math.floor(m/60)}h ${m%60}m`;
+const DURS=[30,60,120,240,480,720,1440,2880,4320,10080];
+function bgApprovers(g,reqUid){const t=groupById(g)||{};const la=(t.leads||[]).filter(u=>u!==reqUid);let ov=(t.overseers||[]).filter(u=>u!==reqUid);let fallback=false;
+  if(!(t.overseers||[]).length){fallback=true;const ap=assemblyPastor();ov=ap&&ap!==reqUid?[ap]:saUsers().filter(u=>u!==reqUid);}return{la,ov,fallback};}
+const bgId=(g,u)=>`${g}_${u}`;
+
+// ---------- group page: structure for everyone, contents only for the group ----------
+groupSpace=function(g){const t=groupById(g);if(!t)return `<div class="empty">That group no longer exists.</div>`;const mem=privMember(g),ovs=isOverseer(g),lead=realLead(g);
+  const tabs=[...GTABS.filter(([k])=>k!=="finance"||realOfficer(g)||ovs||bgActive(g,"finance")||!mem),["privacy","Privacy"]];let tab=LS.get("gtab","chat");if(!tabs.some(x=>x[0]===tab))tab=mem?"chat":"members";
+  const crew=gcol(g,"crew");const pend=crew.filter(c=>c.status==="pending").length,step2=crew.filter(c=>c.status==="lead-ok").length;
+  if(["chat","log","calendar","finance","inventory"].includes(tab))gsub(g,{chat:"chat",log:"log",calendar:"events",finance:"finance",inventory:"inventory"}[tab]);
+  if(tab==="calendar")gsub(g,"roster");
+  if(tab==="notices"){const s=LS.get("gseen:"+g,{});s.notices=nowISO();LS.set("gseen:"+g,s);}
+  const badge={notices:mem?groupUnread(g):0,members:(isLeadOf(g)?pend:0)+(isFinalApprover(g)?step2:0),requests:groupReqCount(g),privacy:bgDocs().filter(d=>d.g===g&&d.status==="Pending"&&bgNeedsMe(d)).length};
+  const units=unitsOf(g);
+  const role=lead?((t.leads||[]).includes(me.id)?(t.leadUid===me.id?"You lead this group":"You assist the lead of this group"):"You lead the parent group"):ovs?"You oversee this group":!mem?"Structure only – the group's contents are private":"";
+  const banner=ovs&&!lead?`<div class="note-ovs">${ic("eye")}<div><b>Overseer view.</b> You can read everything here, give the final approval for new members and requests, and post notices to guide the group. Day-to-day running stays with the lead.</div></div>`:"";
+  const bodies={...GT_BODIES,chat:gtChat,notices:gtNotices,calendar:gtCalendar,roster:gtRoster,members:gtMembers,requests:gtRequests,finance:gtFinance,inventory:gtInventory,log:gtLog,privacy:privacyPanel};
+  let body;const pt=tab==="dues"||tab==="finance"||PRIV_TABS.includes(tab);
+  if(pt&&!privOK(g,tab))body=lockCard(g,tab);
+  else{body=(bodies[tab]||(()=>""))(g);if(pt&&!mem){const x=bgDocs().find(d=>d.g===g&&d.uid===me.id&&bgLive(d));body=`<div class="note-warn">${ic("eye")}<div><b>Temporary access</b> until ${esc(new Date(n(x.untilMs)).toLocaleString("en-NG",{weekday:"short",hour:"2-digit",minute:"2-digit"}))}. ${esc(t.name)} can see that you viewed this. <button class="lnk" data-bgend="${esc(x._id)}">End access now</button></div></div>`+body;bgLogView(x,tab);}
+    if(typeof shareBar==="function")body=shareBar(g,tab)+body;}
+  return PH(esc(t.name),"team",`${t.parent?`Unit of ${esc(groupName(t.parent))} · `:""}${esc(t.role||"")}${role?" · "+role:""}`,`${t.parent?btn(esc(groupName(t.parent)),`data-gopen="${esc(t.parent)}"`,"ghost"):""}${btn("All my groups",'data-page="mygroups"',"ghost")}`)+
+   `${units.length?`<div class="chips" style="margin:-6px 0 12px"><span class="small muted" style="align-self:center">Units:</span>${units.map(u=>`<button class="chip" data-gopen="${esc(u._id)}">${esc(u.name)}</button>`).join("")}</div>`:""}${banner}
+   <div class="tabs">${tabs.map(([k,l])=>`<button class="tab ${tab===k?"on":""}" data-gtab="${k}">${(k==="dues"||k==="finance"||PRIV_TABS.includes(k))&&!privOK(g,k)?`${ic("lock")}`:""}${l}${badge[k]?` <b>${badge[k]}</b>`:""}</button>`).join("")}</div>${body}`;};
+function lockCard(g,tab,label){const t=groupById(g)||{};const mine=bgDocs().find(d=>d.g===g&&d.uid===me.id&&d.status==="Pending");
+  return `<div class="card"><div class="empty">${ic("lock")}<b>${esc(label||TAB_LBL[tab]||"This")} is private to ${esc(t.name||groupName(g))}</b>Only the group's members, its leads and its overseer can see inside. Admins and the rest of the Pastorate see the group's name, leads and members only.
+   ${canRequestBG()?(mine?`<div style="margin-top:10px">${pill("Access request waiting for approval","p-warn")} <button class="lnk" data-bgcancel="${esc(mine._id)}">Withdraw</button></div>`:`<div style="margin-top:12px"><button class="btn pri" data-bgreq="${esc(g)}|${esc(tab)}">${ic("eye")}Request temporary access</button></div><div class="small muted" style="margin-top:6px">Needs approval from a lead or assistant <b>and</b> the overseer. The group will see who looked, when and why.</div>`):""}</div></div>`;}
+function privacyPanel(g){const t=groupById(g)||{};const mem=groupMembers(g);const{la,ov,fallback}=bgApprovers(g,"");const L=bgDocs().filter(d=>d.g===g).sort((a,b)=>(b.at||"").localeCompare(a.at||""));
+  const live=L.filter(bgLive);const parentLeads=t.parent?(((groupById(t.parent)||{}).leads)||[]):[];
+  const row=d=>{const st=bgLive(d)?["Active until "+new Date(n(d.untilMs)).toLocaleString("en-NG",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}),"p-warn"]:d.status==="Pending"?["Waiting for approval","p-info"]:d.status==="Declined"?["Declined","p-off"]:["Ended","p-off"];
+    const need=bgNeedsMe(d);return `<div class="ri" style="cursor:default"><div>${avatar(d.uid,32)}</div><div style="min-width:0"><div class="t">${esc(who(d.uid))}${titleOf(d.uid)?` · ${esc(titleOf(d.uid))}`:isSA()&&d.uid===me.id?"":""} asked to see ${esc((d.tabs||[]).map(x=>TAB_LBL[x]||x).join(", "))}</div><div class="m">${esc(durTxt(n(d.minutes)))} · ${esc(ago(d.at))} · reason: ${esc(d.reason||"")}</div>
+      <div class="m">${d.la?`Lead/assistant: ${esc(who(d.la.by))} ${d.la.declined?"declined":"approved"}`:"Lead/assistant: waiting"} · ${d.ov?`Overseer: ${esc(who(d.ov.by))} ${d.ov.declined?"declined":"approved"}`:"Overseer: waiting"}</div>${(d.viewed||[]).length?`<div class="m">Viewed: ${esc((d.viewed||[]).slice(-6).map(v=>`${TAB_LBL[v.tab]||v.tab} ${new Date(v.at).toLocaleString("en-NG",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}`).join(" · "))}</div>`:""}</div>
+      <div class="r">${pill(st[0],st[1])}${need?`<button class="btn sm ghost" data-bgdec="${esc(d._id)}">Decline</button><button class="btn sm pri" data-bgok="${esc(d._id)}">Review</button>`:""}${bgLive(d)&&(realLead(g)||isOverseer(g)||d.uid===me.id)?`<button class="btn sm ghost" data-bgend="${esc(d._id)}">End now</button>`:""}</div></div>`;};
+  return `<div class="grid g2" style="align-items:start"><div class="card"><div class="hd"><h2>${ic("shield")}Who can see inside ${esc(t.name||"")}</h2></div><div class="bd stack small">
+    <div><b>${mem.length} member${mem.length===1?"":"s"}</b> – chat, notices, tasks, calendar, minutes, dues, inventory${realOfficer(g)?" and (officers only) finance":""}.</div>
+    <div><b>Leads:</b> ${(t.leads||[]).map(whoT).join(", ")||"none set"}</div>
+    ${parentLeads.length?`<div><b>Parent group leads:</b> ${parentLeads.map(whoT).join(", ")}</div>`:""}
+    <div><b>Overseer:</b> ${(t.overseers||[]).map(whoT).join(", ")||`none yet – the ${esc(seniorTitle())} approves temporary access instead`}</div>
+    <div><b>Temporary access right now:</b> ${live.length?live.map(d=>`${whoT(d.uid)} (${esc((d.tabs||[]).map(x=>TAB_LBL[x]||x).join(", "))})`).join(", "):"nobody"}</div>
+    <div class="muted">Admins, Super Admins and the rest of the Pastorate see only the group's name, leads, members and meeting time. To look inside for a real problem, a Super Admin or the ${esc(seniorTitle())} must ask for temporary access, approved by a lead or assistant and the overseer. Every look is recorded here.</div>
+    ${canRequestBG()&&!privMember(g)?`<button class="btn sm pri" style="align-self:flex-start" data-bgreq="${esc(g)}|chat">${ic("eye")}Request temporary access</button>`:""}</div></div>
+   <div class="card"><div class="hd"><h2>Access requests</h2><span class="n">latest first</span></div><div class="rows">${L.slice(0,15).map(row).join("")||`<div class="empty">No one has asked to look inside this group.</div>`}</div></div></div>${typeof sharesOfGroup==="function"?sharesOfGroup(g):""}`;}
+
+// ---------- requesting, approving, ending ----------
+function bgSlotFor(d){const t=groupById(d.g)||{};const{la,ov}=bgApprovers(d.g,d.uid);if(d.uid===me.id)return "";if(!d.la&&la.includes(me.id))return "la";if(!d.ov&&ov.includes(me.id))return "ov";return "";}
+const bgNeedsMe=d=>d.status==="Pending"&&!!bgSlotFor(d);
+H8.bgreq=t=>{const[g,tab]=t.dataset.bgreq.split("|");if(!canRequestBG())return;const gt=groupById(g)||{};const{la,ov,fallback}=bgApprovers(g,me.id);
+  if(!la.length){toast(`${gt.name} has no lead or assistant to approve – set one in Groups & Roles first`);return;}if(!ov.length){toast("There is no overseer or senior pastor available to approve");return;}
+  const tabsAll=[...PRIV_TABS,...(officeByG(g)?["office"]:[])];
+  sheet({title:`Temporary access · ${gt.name}`,body:`<div class="small muted">Ask to look inside ${esc(gt.name)} for a real problem (a dispute, a fraud concern or a report). A lead or assistant <b>and</b> ${fallback?`the ${esc(seniorTitle())} (no overseer yet)`:"the overseer"} must both approve; each can allow less than you ask. The group will see who looked, when and why.</div>
+   <label class="f">Reason *<textarea class="in" id="bgR" placeholder="e.g. A member reported a scam message in this group's chat on Sunday"></textarea></label>
+   <div class="f">What do you need to see?${multiHTML("bgT",tabsAll.map(x=>[x,TAB_LBL[x]]),[tab])}</div>
+   <label class="f">For how long?<select class="in" id="bgD">${DURS.map(m=>`<option value="${m}" ${m===60?"selected":""}>${durTxt(m)}</option>`).join("")}<option value="c">Other…</option></select></label>
+   <label class="f" id="bgCw" hidden>Hours (0.5 or more)<input class="in" type="number" step="0.5" min="0.5" id="bgC" value="1"></label>
+   <div class="small muted">Approvers: ${la.map(who).map(esc).join(" or ")} <b>and</b> ${ov.map(who).map(esc).join(" or ")}.</div>`,
+   foot:`<span style="flex:1"></span><button class="btn ghost" data-close="1">Cancel</button><button class="btn pri" id="bgGo">Send request</button>`});
+  document.getElementById("bgD").onchange=e=>{document.getElementById("bgCw").hidden=e.target.value!=="c";};
+  document.getElementById("bgGo").onclick=async()=>{const reason=document.getElementById("bgR").value.trim();const tabs=readMulti("bgT");const dv=document.getElementById("bgD").value;const minutes=dv==="c"?Math.round(n(document.getElementById("bgC").value)*60):Number(dv);
+    if(reason.length<10){toast("Please give a clear reason (at least 10 characters)");return;}if(!tabs.length){toast("Choose at least one area");return;}if(minutes<30){toast("The shortest time is 30 minutes");return;}
+    const id=bgId(g,me.id);const old=bgDocs().find(d=>d._id===id);if(old&&bgLive(old)){toast("You already have access to this group");return;}
+    try{if(old)await db.doc(`breakglass/${id}`).delete();await db.doc(`breakglass/${id}`).set({g,uid:me.id,reason,tabs,minutes,status:"Pending",at:nowISO(),la:null,ov:null,approvers:[...la,...ov]});}catch(e){toast(errMsg(e));return;}
+    notify([...la,...ov],`Temporary access request · ${gt.name}`,`${who(me.id)} asks to see ${tabs.map(x=>TAB_LBL[x]).join(", ")} for ${durTxt(minutes)}. Reason: ${reason}`,"approvals");
+    logAct("requested temporary access",`teams/${g}`,id,`${tabs.join(",")} · ${durTxt(minutes)} · ${reason.slice(0,100)}`);closeLayer();toast("Request sent – you'll be told when it's approved");};};
+H8.bgcancel=async t=>{const id=t.dataset.bgcancel;try{await db.doc(`breakglass/${id}`).delete();toast("Request withdrawn");}catch(e){toast(errMsg(e));}};
+H8.bgok=t=>{const d=bgDocs().find(x=>x._id===t.dataset.bgok);if(!d)return;const slot=bgSlotFor(d);if(!slot){toast("You can't approve this one");return;}const gt=groupById(d.g)||{};
+  sheet({title:`Allow ${who(d.uid)} to look inside ${gt.name}?`,body:`<div class="card"><div class="bd small"><b>Reason:</b> ${esc(d.reason)}<br><b>Asked for:</b> ${esc((d.tabs||[]).map(x=>TAB_LBL[x]).join(", "))} · ${esc(durTxt(n(d.minutes)))}</div></div>
+   <div class="f">Allow access to (untick anything you don't agree to)${multiHTML("bgaT",(d.tabs||[]).map(x=>[x,TAB_LBL[x]]),d.tabs||[])}</div>
+   <label class="f">For<select class="in" id="bgaD">${[...new Set([...DURS.filter(m=>m<=n(d.minutes)),n(d.minutes)])].sort((a,b)=>a-b).map(m=>`<option value="${m}" ${m===n(d.minutes)?"selected":""}>${durTxt(m)}</option>`).join("")}</select></label>
+   <div class="small muted">You're approving as the group's ${slot==="la"?"lead/assistant":"overseer"}. Access starts only when ${slot==="la"?"the overseer":"a lead or assistant"} has approved too, and the group gets a notice.</div>`,
+   foot:`<span style="flex:1"></span><button class="btn ghost" data-close="1">Cancel</button><button class="btn pri" id="bgaGo">Approve</button>`});
+  document.getElementById("bgaGo").onclick=async()=>{const tabs=readMulti("bgaT");const minutes=Number(document.getElementById("bgaD").value);if(!tabs.length){toast("Allow at least one area, or decline instead");return;}
+    const x={...d};delete x._id;x[slot]={by:me.id,at:nowISO(),tabs,minutes};const other=x[slot==="la"?"ov":"la"];let act=false;
+    if(other&&!other.declined){const ft=tabs.filter(k=>(other.tabs||[]).includes(k));if(!ft.length){toast("You and the other approver agree on nothing – decline instead");return;}x.status="Active";x.tabs=ft;const mins=Math.min(minutes,n(other.minutes));x.untilMs=Date.now()+mins*60000;x.approvedAt=nowISO();act=true;}
+    try{await db.doc(`breakglass/${d._id}`).set(x);}catch(e){toast(errMsg(e));return;}
+    if(act){const until=new Date(x.untilMs).toLocaleString("en-NG",{weekday:"short",hour:"2-digit",minute:"2-digit"});
+      addDoc(`teams/${d.g}/notices`,{title:"Temporary access granted",body:`${who(d.uid)}${titleOf(d.uid)?" ("+titleOf(d.uid)+")":isSA()?"":""} can view ${x.tabs.map(k=>TAB_LBL[k]).join(", ")} until ${until}.\nReason: ${d.reason}\nApproved by ${who(x.la.by)} and ${who(x.ov.by)}.`,by:me.id,at:nowISO(),role:"Privacy"});
+      notify([d.uid],`Access approved · ${gt.name}`,`You can view ${x.tabs.map(k=>TAB_LBL[k]).join(", ")} until ${until}.`,`mygroups:${d.g}`);}
+    else notify([d.uid],`One approval received · ${gt.name}`,`${who(me.id)} approved; waiting for ${slot==="la"?"the overseer":"a lead or assistant"}.`,"approvals");
+    logAct(act?"granted temporary access":"approved temporary access (1 of 2)",`teams/${d.g}`,d._id,`${who(d.uid)} · ${tabs.join(",")} · ${durTxt(minutes)}`);closeLayer();toast(act?"Access granted – the group has been told":"Approved – waiting for the second approver");};};
+H8.bgdec=async t=>{const d=bgDocs().find(x=>x._id===t.dataset.bgdec);if(!d)return;const slot=bgSlotFor(d);if(!slot)return;const why=prompt("Reason for declining (optional):")||"";
+  const x={...d};delete x._id;x[slot]={by:me.id,at:nowISO(),tabs:[],minutes:0,declined:true,note:why.slice(0,200)};x.status="Declined";
+  try{await db.doc(`breakglass/${d._id}`).set(x);}catch(e){toast(errMsg(e));return;}notify([d.uid],`Access declined · ${groupName(d.g)}`,why||`${who(me.id)} declined your request.`,"approvals");logAct("declined temporary access",`teams/${d.g}`,d._id,who(d.uid));toast("Declined");};
+H8.bgend=async t=>{const d=bgDocs().find(x=>x._id===t.dataset.bgend);if(!d)return;const x={...d};delete x._id;x.status="Ended";x.endedBy=me.id;x.endedAt=nowISO();
+  try{await db.doc(`breakglass/${d._id}`).set(x);}catch(e){toast(errMsg(e));return;}logAct("ended temporary access",`teams/${d.g}`,d._id,who(d.uid));toast("Access ended");render();};
+const BGV=new Set();function bgLogView(x,tab){const k=x._id+"|"+tab;if(BGV.has(k)||x.uid!==me.id)return;BGV.add(k);const v=[...(x.viewed||[]),{tab,at:nowISO()}].slice(-50);const d={...x,viewed:v};delete d._id;delete d.__seenEnd;db.doc(`breakglass/${x._id}`).set(d).catch(()=>{});logAct("viewed under temporary access",`teams/${x.g}`,x._id,tab);}
+// approvals list: access requests waiting for me
+{const _ai=approvalItems;approvalItems=function(){const out=_ai();for(const d of bgDocs())if(bgNeedsMe(d))out.push({key:`bg|${d._id}`,at:d.at,who:d.uid,title:`Temporary access · ${groupName(d.g)}`,sub:`${(d.tabs||[]).map(x=>TAB_LBL[x]).join(", ")} for ${durTxt(n(d.minutes))} · you approve as ${bgSlotFor(d)==="la"?"lead/assistant":"overseer"}`,body:"Reason: "+d.reason,kind:"bg"});return out;};}
+{const _ra=runApproval;runApproval=async function(key,yes,note){if(key.startsWith("bg|")){const id=key.slice(3);if(yes){H8.bgok({dataset:{bgok:id}});return false;}await H8.bgdec({dataset:{bgdec:id}});return true;}return _ra(key,yes,note);};}
+
+// offices are private to their group too
+{const _op=officePage;officePage=function(k){const o=officeByK(k);if(o&&!inOffice(o))return PH(esc(o.name),o.icon||"team",esc(o.tag||""))+lockCard(o.gid,"office",`The ${o.name} office`);let h=_op(k);
+  if(o&&!privMember(o.gid)&&bgActive(o.gid,"office")){const x=bgDocs().find(d=>d.g===o.gid&&d.uid===me.id&&bgLive(d));h=`<div class="note-warn">${ic("eye")}<div><b>Temporary access</b> to this office until ${esc(new Date(n(x.untilMs)).toLocaleTimeString("en-NG",{hour:"2-digit",minute:"2-digit"}))}. <button class="lnk" data-bgend="${esc(x._id)}">End access now</button></div></div>`+h;bgLogView(x,"office");}
+  return typeof officeShareBar==="function"?officeShareBar(o)+h:h;};}
+for(const o of OFFICES)P["off-"+o.k]=()=>officePage(o.k);
+{const _po=pageOK;pageOK=function(pg){if(String(pg[3]).startsWith("_office:")){const o=officeByK(pg[3].slice(8));return !!o&&(inOffice(o)||canRequestBG());}return _po(pg);};}
+
+// group chat: posting only for members and overseers
+{const _gc=gtChat;gtChat=function(g){const h=_gc(g);return privMember(g)?h:h.replace(/<div id="stg_chat">[\s\S]*<\/form>/,"");};}
+
+// Activity Monitor: no reading of group chats; finances are counted on the server only
+monScanChats=async function(){toast("Group chats are private – scam messages are flagged automatically when they're sent, and members can report a message");};
+monScanFin=async function(){try{const R=rows(await db.collection("monitor_fin").get());MON.fin=R.filter(r=>n(r.backdated)+n(r.large)>0).map(r=>({key:`${r._id}:${(r.at||"").slice(0,10)}`,by:"",at:r.at,title:`${r.name||groupName(r._id)}: ${n(r.backdated)+n(r.large)} finance entr${n(r.backdated)+n(r.large)===1?"y":"ies"} worth a look`,why:`${n(r.backdated)} back-dated, ${n(r.large)} unusually large (checked by the server ${ago(r.at)}). Amounts and names stay private – ask the lead for a shared summary or request temporary access.`}));MON.scanned.fin=Date.now();rerender();}catch(e){MON.fin=[];}};
+{const _ml=monLoad;monLoad=async function(force){const first=!MON.loaded;await _ml(force);if(first||force)monScanFin();};}
+{const _pm=P.monitor;P.monitor=()=>_pm().replace(/<button class="btn ghost" data-monscan="chat">[\s\S]*?<\/button>/,"").replace(">Check finances<",">Finance checks<");}
+
+// ================= HOH Family v11: "Share summary with" – reports out of a group, approvals and schedules =================
+const SHARE_KINDS={finance:"Finance summary",dues:"Dues summary",roster:"Roster summary",log:"Minutes & activity summary",inventory:"Inventory summary",requests:"Requests summary",office:"Office summary"};
+const canShare=g=>realLead(g)||realOfficer(g);
+const sharesDirect=g=>realLead(g);
+const sharesAll=()=>{const m=new Map();for(const[k,v]of Object.entries(G))if(k.startsWith("sh:"))for(const r of v||[])m.set(r._id,r);return [...m.values()];};
+const plansAll=()=>{const m=new Map();for(const[k,v]of Object.entries(G))if(k.startsWith("sp:"))for(const r of v||[])m.set(r._id,r);return [...m.values()];};
+function shareSubs(){if(!db||!me.id||!(isOwner||myMember()))return;const c=db.collection("shares"),p=db.collection("shareplans");if(!c.where)return;
+  sub("sh:to",c.where("toUsers","array-contains",me.id),snap=>{G["sh:to"]=rows(snap);rerender();});sub("sh:by",c.where("by","==",me.id),snap=>{G["sh:by"]=rows(snap);rerender();});
+  for(const g of [...new Set([...myGroups(),...S.teams.filter(t=>realLead(t._id)).map(t=>t._id)])]){sub("sh:g:"+g,c.where("g","==",g),snap=>{G["sh:g:"+g]=rows(snap);rerender();});sub("sp:g:"+g,p.where("g","==",g),snap=>{G["sp:g:"+g]=rows(snap);rerender();});}}
+{const _sf=syncFamily;syncFamily=function(){_sf();try{shareSubs();}catch(e){}};}
+// periods
+function periodRange(k,from,to){const d=today();const y=d.getFullYear(),m=d.getMonth();const f=(a,b)=>[iso(a),iso(b)];
+  if(k==="this-month")return f(new Date(y,m,1),new Date(y,m+1,0));if(k==="last-month")return f(new Date(y,m-1,1),new Date(y,m,0));
+  if(k==="this-quarter"){const q=Math.floor(m/3)*3;return f(new Date(y,q,1),new Date(y,q+3,0));}if(k==="last-quarter"){const q=Math.floor(m/3)*3-3;return f(new Date(y,q,1),new Date(y,q+3,0));}
+  if(k==="this-year")return f(new Date(y,0,1),new Date(y,11,31));if(k==="last-week")return f(addD(d,-7-((d.getDay()+6)%7)),addD(d,-1-((d.getDay()+6)%7)));return [from||tISO(),to||tISO()];}
+const inR=(s,a,b)=>{const x=String(s||"").slice(0,10);return x>=a&&x<=b;};
+// what each summary contains (totals only, never the raw records)
+function buildSummary(g,kind,a,b){const L=[],notes=[];const t=groupById(g)||{};
+  if(kind==="finance"){const R=gcol(g,"finance");const P2=R.filter(x=>inR(x.date||x.at,a,b));const inn=P2.filter(x=>x.type==="Money in").reduce((s,x)=>s+n(x.amount),0),out=P2.filter(x=>x.type==="Money out").reduce((s,x)=>s+n(x.amount),0);
+    const bal=R.filter(x=>String(x.date||x.at||"").slice(0,10)<=b).reduce((s,x)=>s+(x.type==="Money in"?1:-1)*n(x.amount),0);
+    L.push(["Money in",naira(inn)],["Money out",naira(out)],["Net for the period",naira(inn-out)],["Balance at end of period",naira(bal)],["Entries in the period",String(P2.length)]);
+    const cats={};for(const x of P2)cats[(x.type==="Money in"?"In · ":"Out · ")+(x.cat||"Other")]=(cats[(x.type==="Money in"?"In · ":"Out · ")+(x.cat||"Other")]||0)+n(x.amount);
+    for(const[k,v]of Object.entries(cats).sort((x,y)=>y[1]-x[1]).slice(0,8))L.push([k,naira(v)]);}
+  else if(kind==="dues"){const SC2=gcol(g,"dues").filter(s=>s.active!==false);const mem=groupMembers(g);const pays=duesPays(g);
+    for(const sc of SC2){const R=mem.map(u=>duesRow(g,sc,u));const exp=R.reduce((s,r)=>s+r.expected,0),paid=R.reduce((s,r)=>s+r.paid,0);const inP=pays.filter(p=>p.sid===sc._id&&inR(p.date||p.at,a,b)).reduce((s,p)=>s+n(p.amount),0);
+      L.push([`${sc.name} – collected in the period`,naira(inP)],[`${sc.name} – expected to date`,naira(exp)],[`${sc.name} – collected to date`,naira(paid)],[`${sc.name} – outstanding`,naira(Math.max(0,exp-paid))],[`${sc.name} – members up to date`,`${R.filter(r=>r.bal<=0).length} of ${R.length}`]);}
+    if(!SC2.length)notes.push("No dues or contributions are set up.");}
+  else if(kind==="roster"){const R=gcol(g,"roster").filter(x=>inR(x.date,a,b));const ppl=new Set(R.map(x=>x.person).filter(Boolean));const roles={};for(const x of R)roles[x.role||"Other"]=(roles[x.role||"Other"]||0)+1;
+    L.push(["Assignments",String(R.length)],["Different people serving",String(ppl.size)],["Confirmed",String(R.filter(x=>/confirm/i.test(x.status||"")).length)],["Not yet confirmed",String(R.filter(x=>!/confirm/i.test(x.status||"")).length)]);
+    for(const[k,v]of Object.entries(roles).sort((x,y)=>y[1]-x[1]).slice(0,6))L.push([`Role · ${k}`,String(v)]);}
+  else if(kind==="log"){const R=gcol(g,"log").filter(x=>inR(x.date||x.at,a,b)).sort((x,y)=>(y.date||"").localeCompare(x.date||""));const kinds={};for(const x of R)kinds[x.kind||"Entry"]=(kinds[x.kind||"Entry"]||0)+1;
+    L.push(["Entries",String(R.length)],...Object.entries(kinds).map(([k,v])=>[k,String(v)]));for(const x of R.filter(x=>/minutes|decision/i.test(x.kind||"")).slice(0,5))notes.push(`${fmtS(x.date)} · ${x.kind}: ${String(x.text||"").replace(/\s+/g," ").slice(0,160)}`);}
+  else if(kind==="inventory"){const R=gcol(g,"inventory");const c={};for(const x of R)c[x.cond||"Not stated"]=(c[x.cond||"Not stated"]||0)+1;L.push(["Items",String(R.length)],["Total quantity",String(R.reduce((s,x)=>s+n(x.qty),0))],...Object.entries(c).map(([k,v])=>[`Condition · ${k}`,String(v)]));}
+  else if(kind==="requests"){const R=groupReqs(g).filter(x=>inR(x.at,a,b));const st={};for(const x of R)st[x.status||"Requested"]=(st[x.status||"Requested"]||0)+1;
+    L.push(["Requests raised",String(R.length)],...Object.entries(st).map(([k,v])=>[`Status · ${k}`,String(v)]),["Estimated cost",naira(R.reduce((s,x)=>s+n(x.cost),0))],["Spent",naira(R.reduce((s,x)=>s+n(x.spent),0))]);}
+  else if(kind==="office"){const T=allTasks().filter(x=>x.ogid===g);const st={};for(const x of T)st[x.status||"To do"]=(st[x.status||"To do"]||0)+1;const od=T.filter(x=>x.status!=="Done"&&x.due&&x.due<tISO()).length;
+    const mn=(G["mn:"+g]||[]).filter(x=>inR(x.date,a,b));L.push(["Tasks",String(T.length)],...Object.entries(st).map(([k,v])=>[`Tasks · ${k}`,String(v)]),["Overdue tasks",String(od)],["Meetings with minutes in the period",String(mn.length)]);
+    for(const m2 of mn.slice(0,5))notes.push(`${fmtS(m2.date)} · ${m2.title||"Meeting"}`);}
+  return{lines:L,notes,title:`${SHARE_KINDS[kind]} · ${t.name||groupName(g)}`};}
+function shareBar(g,tab){const kind={finance:"finance",dues:"dues",roster:"roster",log:"log",inventory:"inventory",requests:"requests"}[tab];if(!kind||!canShare(g))return "";
+  const due=plansAll().filter(p=>p.g===g&&p.kind===kind&&p.status==="Active"&&p.next&&p.next<=iso(addD(today(),1)));
+  return `<div class="sharebar">${due.map(p=>`<div class="note-warn">${ic("bell")}<div><b>${esc(SHARE_KINDS[kind])} due ${p.next<=tISO()?"now":"tomorrow"}</b> to ${esc(shareToText(p))}. <button class="lnk" data-shnew="${esc(g)}|${kind}|${esc(p._id)}">Prepare it</button></div></div>`).join("")}
+   <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${btn(`${ic("up")}Share summary with…`,`data-shnew="${esc(g)}|${kind}|"`,"ghost")}${btn(`${ic("cal")}Scheduled shares`,`data-shplans="${esc(g)}|${kind}"`,"ghost")}</div></div>`;}
+function officeShareBar(o){if(!o||!canShare(o.gid))return "";return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;justify-content:flex-end">${btn(`${ic("up")}Share summary with…`,`data-shnew="${esc(o.gid)}|office|"`,"ghost")}${btn(`${ic("cal")}Scheduled shares`,`data-shplans="${esc(o.gid)}|office"`,"ghost")}</div>`;}
+const shareToText=x=>[...(x.toGroups||[]).map(groupName),...(x.toPeople||[]).map(who)].join(", ")||"—";
+function expandTo(toGroups,toPeople){return [...new Set([...toGroups.flatMap(gg=>groupMembers(gg)),...toPeople])].filter(u=>u&&u!==me.id);}
+H8.shnew=t=>{const[g,kind,planId]=t.dataset.shnew.split("|");if(!canShare(g)){toast("Only the group's leads, assistants, treasurer or secretary can share");return;}
+  const plan=planId?plansAll().find(p=>p._id===planId):null;const direct=sharesDirect(g);const gt=groupById(g)||{};
+  const pk=plan?({weekly:"last-week",monthly:"last-month",quarterly:"last-quarter"}[plan.freq]||"last-month"):"this-month";
+  sheet({title:`Share ${SHARE_KINDS[kind].toLowerCase()}`,body:`<div class="small muted">Only totals are shared – never the individual entries, names or messages. ${direct?"It goes straight to the people you choose.":"A lead or assistant must approve it before it is sent."}</div>
+   <div class="grid g2"><label class="f">Period<select class="in" id="shP">${[["this-month","This month"],["last-month","Last month"],["last-week","Last week"],["this-quarter","This quarter"],["last-quarter","Last quarter"],["this-year","This year"],["custom","Choose dates"]].map(([k,l])=>`<option value="${k}" ${k===pk?"selected":""}>${l}</option>`).join("")}</select></label>
+   <div class="grid g2" id="shCw" hidden><label class="f">From<input class="in" type="date" id="shF"></label><label class="f">To<input class="in" type="date" id="shT" value="${tISO()}"></label></div></div>
+   <div class="f">Share with groups${multiHTML("shG",[...S.teams].filter(x=>x._id!==g).sort(byFull).map(x=>[x._id,fullName(x)]),plan?plan.toGroups||[]:[])}</div>
+   <label class="f">…and/or people<select class="in" id="shU" multiple size="5">${S.members.filter(m=>m._id!==me.id).map(m=>[m._id,who(m._id)]).sort((x,y)=>x[1].localeCompare(y[1])).map(([id,nm])=>`<option value="${esc(id)}" ${plan&&(plan.toPeople||[]).includes(id)?"selected":""}>${esc(nm)}</option>`).join("")}</select></label>
+   <label class="f">Note (optional)<textarea class="in" id="shN" placeholder="e.g. For the quarterly audit"></textarea></label>
+   <div class="card"><div class="hd"><h2>Preview</h2></div><div class="bd" id="shPrev"></div></div>`,
+   foot:`<span style="flex:1"></span><button class="btn ghost" data-close="1">Cancel</button><button class="btn pri" id="shGo">${direct?"Share":"Send to lead for approval"}</button>`});
+  const rng=()=>{const k=document.getElementById("shP").value;document.getElementById("shCw").hidden=k!=="custom";return periodRange(k,document.getElementById("shF").value,document.getElementById("shT").value);};
+  const draw=()=>{const[a,b]=rng();const S2=buildSummary(g,kind,a,b);document.getElementById("shPrev").innerHTML=summaryHTML({...S2,from:a,to:b});};draw();
+  ["shP","shF","shT"].forEach(id=>document.getElementById(id).onchange=draw);
+  document.getElementById("shGo").onclick=async()=>{const[a,b]=rng();if(a>b){toast("The start date must be before the end date");return;}const toGroups=readMulti("shG");const toPeople=[...document.getElementById("shU").selectedOptions].map(o=>o.value);
+    if(!toGroups.length&&!toPeople.length){toast("Choose at least one group or person");return;}const S2=buildSummary(g,kind,a,b);
+    const d={g,gname:gt.name||groupName(g),kind,title:S2.title,from:a,to:b,lines:S2.lines,notes:S2.notes,note:document.getElementById("shN").value.trim().slice(0,500),toGroups,toPeople,toUsers:expandTo(toGroups,toPeople),by:me.id,at:nowISO(),status:direct?"Shared":"Pending",planId:planId||""};
+    try{await db.collection("shares").add(d);}catch(e){toast(errMsg(e));return;}
+    if(direct){notify(d.toUsers,`Shared report: ${d.title}`,`${fmtS(a)} – ${fmtS(b)} · from ${who(me.id)}`,"shared");}else notify((gt.leads||[]).filter(u=>u!==me.id),`Approve a shared report: ${d.title}`,`${who(me.id)} wants to share it with ${shareToText(d)}.`,"approvals");
+    if(plan)await advancePlan(plan);logAct(direct?"shared summary":"asked to share summary",`teams/${g}`,kind,`${d.title} → ${shareToText(d)}`);closeLayer();toast(direct?"Shared":"Sent to the lead for approval");};};
+function summaryHTML(s){return `<div class="small muted">${esc(fmtS(s.from))} – ${esc(fmtS(s.to))}</div><table class="sumt"><tbody>${(s.lines||[]).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num"><b>${esc(v)}</b></td></tr>`).join("")}</tbody></table>${(s.notes||[]).length?`<div class="small" style="margin-top:8px">${s.notes.map(x=>`<div>• ${esc(x)}</div>`).join("")}</div>`:""}${s.note?`<div class="small muted" style="margin-top:8px">Note: ${esc(s.note)}</div>`:""}`;}
+// pending shares from treasurers/secretaries → leads approve in Approvals
+{const _ai=approvalItems;approvalItems=function(){const out=_ai();for(const s of sharesAll())if(s.status==="Pending"&&s.by!==me.id&&realLead(s.g))out.push({key:`sh|${s._id}`,at:s.at,who:s.by,title:`Share: ${s.title}`,sub:`Shared report · to ${shareToText(s)} · ${fmtS(s.from)} – ${fmtS(s.to)}`,body:(s.lines||[]).slice(0,3).map(l=>l.join(": ")).join(" · "),kind:"sh"});return out;};}
+async function shareDecide(id,yes){const s=sharesAll().find(x=>x._id===id);if(!s||!realLead(s.g)||s.by===me.id)return false;const d={...s,status:yes?"Shared":"Declined",approvedBy:me.id,approvedAt:nowISO()};delete d._id;
+  try{await db.doc(`shares/${id}`).set(d);}catch(e){toast(errMsg(e));return false;}if(yes)notify(s.toUsers||[],`Shared report: ${s.title}`,`${fmtS(s.from)} – ${fmtS(s.to)} · from ${groupName(s.g)}`,"shared");
+  notify([s.by],`${yes?"Approved":"Not approved"}: ${s.title}`,"",`mygroups:${s.g}`);logAct(yes?"approved shared summary":"declined shared summary",`teams/${s.g}`,id,s.title);return true;}
+{const _ra=runApproval;runApproval=async function(key,yes,note){if(key.startsWith("sh|"))return shareDecide(key.slice(3),yes);return _ra(key,yes,note);};}
+H8.shview=t=>{const s=sharesAll().find(x=>x._id===t.dataset.shview);if(!s)return;const mine=s.by===me.id||realLead(s.g);
+  sheet({title:s.title,body:`<div class="small muted">From ${esc(s.gname||groupName(s.g))} · shared by ${esc(who(s.by))}${s.approvedBy&&s.approvedBy!==s.by?` · approved by ${esc(who(s.approvedBy))}`:""} · ${esc(ago(s.at))}</div>${summaryHTML(s)}<div class="small muted">Shared with ${esc(shareToText(s))}. This is a read-only summary.</div>`,
+   foot:`${mine&&s.status==="Shared"?`<button class="btn danger" data-shwd="${esc(s._id)}">Withdraw</button>`:""}<span style="flex:1"></span><button class="btn ghost" data-close="1">Close</button><button class="btn pri" data-shpdf="${esc(s._id)}">${ic("dl")}Download PDF</button>`});};
+H8.shwd=async t=>{const s=sharesAll().find(x=>x._id===t.dataset.shwd);if(!s)return;if(!confirmArm("shw"+s._id)){t.textContent="Tap again to withdraw";return;}const d={...s,status:"Withdrawn",withdrawnBy:me.id,withdrawnAt:nowISO()};delete d._id;
+  try{await db.doc(`shares/${s._id}`).set(d);}catch(e){toast(errMsg(e));return;}logAct("withdrew shared summary",`teams/${s.g}`,s._id,s.title);closeLayer();toast("Withdrawn – recipients can no longer open it");};
+H8.shpdf=async t=>{const s=sharesAll().find(x=>x._id===t.dataset.shpdf);if(!s)return;if(!await loadLib("jspdf","https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.4/jspdf.umd.min.js"))return;const{jsPDF}=window.jspdf;const doc=new jsPDF({unit:"mm",format:"a4"});const M=18;let y=18;
+  doc.setFont("helvetica","bold");doc.setFontSize(15);doc.setTextColor(43,6,46);doc.text(String(settings.churchName||"").toUpperCase(),M,y);y+=7;doc.setFontSize(12);doc.text(s.title,M,y);y+=6;doc.setFont("helvetica","normal");doc.setFontSize(9.5);doc.setTextColor(90,90,90);
+  doc.text(`${fmtS(s.from)} – ${fmtS(s.to)} · shared by ${who(s.by)} on ${fmtS((s.at||"").slice(0,10))}${s.approvedBy&&s.approvedBy!==s.by?" · approved by "+who(s.approvedBy):""}`,M,y);y+=9;doc.setTextColor(20,20,20);doc.setFontSize(11);
+  for(const[k,v]of s.lines||[]){doc.text(String(k),M,y);doc.text(String(v),210-M,y,{align:"right"});y+=7;if(y>275){doc.addPage();y=18;}}
+  if((s.notes||[]).length){y+=3;doc.setFontSize(10);for(const x of s.notes){const L2=doc.splitTextToSize("• "+x,210-2*M);doc.text(L2,M,y);y+=L2.length*5+1;}}
+  if(s.note){y+=4;doc.setTextColor(90,90,90);doc.text(doc.splitTextToSize("Note: "+s.note,210-2*M),M,y);}
+  doc.setFontSize(8);doc.setTextColor(120,120,120);doc.text(`${FAMILY} · read-only summary · ${s._id}`,M,290);
+  await saveFile(`${s.title.replace(/[^A-Za-z0-9 ·-]/g,"").replace(/\s+/g,"_")}.pdf`,doc.output("blob"));logAct("downloaded shared summary","shares",s._id,s.title);};
+// "Shared reports" page
+{const home=AREAS.find(a=>a.k==="home");const i=home.pages.findIndex(p=>p[0]==="links");home.pages.splice(i>=0?i:home.pages.length,0,["shared","Shared reports","doc","_shared"]);}
+{const _po=pageOK;pageOK=function(pg){if(pg[3]==="_shared")return sharesAll().some(s=>s.status==="Shared"&&(s.toUsers||[]).includes(me.id))||sharesAll().some(s=>s.by===me.id);return _po(pg);};}
+P.shared=()=>{const R=sharesAll().filter(s=>s.status==="Shared"&&(s.toUsers||[]).includes(me.id)).sort((a,b)=>(b.at||"").localeCompare(a.at||""));const M2=sharesAll().filter(s=>s.by===me.id).sort((a,b)=>(b.at||"").localeCompare(a.at||""));
+  const row=s=>`<button class="ri" data-shview="${esc(s._id)}"><div>${ic("doc")}</div><div style="min-width:0"><div class="t">${esc(s.title)}</div><div class="m">${esc(fmtS(s.from))} – ${esc(fmtS(s.to))} · ${esc(who(s.by))} · ${esc(ago(s.at))}</div></div><div class="r">${s.status!=="Shared"?epill(s.status):""}</div></button>`;
+  return PH("Shared reports","doc","Read-only summaries that groups and offices have shared with you – for reports, audits and reviews")+
+  `<div class="card"><div class="hd"><h2>Shared with me</h2><span class="n">${R.length}</span></div><div class="rows">${R.map(row).join("")||`<div class="empty"><b>Nothing shared with you yet</b>When a group or office shares a summary with you or your group, it appears here.</div>`}</div></div>
+  ${M2.length?`<div class="card" style="margin-top:14px"><div class="hd"><h2>Shared by me</h2></div><div class="rows">${M2.map(row).join("")}</div></div>`:""}`;};
+function sharesOfGroup(g){const R=sharesAll().filter(s=>s.g===g).sort((a,b)=>(b.at||"").localeCompare(a.at||"")).slice(0,12);if(!R.length)return "";
+  return `<div class="card" style="margin-top:14px"><div class="hd"><h2>Summaries shared outside the group</h2></div><div class="rows">${R.map(s=>`<button class="ri" data-shview="${esc(s._id)}"><div>${ic("up")}</div><div style="min-width:0"><div class="t">${esc(s.title)}</div><div class="m">to ${esc(shareToText(s))} · ${esc(who(s.by))} · ${esc(ago(s.at))}</div></div><div class="r">${epill(s.status)}</div></button>`).join("")}</div></div>`;}
+// scheduled shares
+const FREQ_LBL={weekly:"Every week",monthly:"Every month",quarterly:"Every quarter"};
+function nextDate(freq,from){const d=pd(from)||today();if(freq==="weekly")return iso(addD(d,7));if(freq==="quarterly")return iso(new Date(d.getFullYear(),d.getMonth()+3,d.getDate()));return iso(new Date(d.getFullYear(),d.getMonth()+1,d.getDate()));}
+async function advancePlan(p){let nx=p.next||tISO();while(nx<=tISO())nx=nextDate(p.freq,nx);const d={...p,next:nx,lastSent:tISO(),remindedFor:""};delete d._id;try{await db.doc(`shareplans/${p._id}`).set(d);}catch(e){}}
+H8.shplans=t=>{const[g,kind]=t.dataset.shplans.split("|");const L2=plansAll().filter(p=>p.g===g&&p.kind===kind);const lead=realLead(g);
+  sheet({title:`Scheduled shares · ${SHARE_KINDS[kind]}`,body:`<div class="small muted">A reminder goes to the person who set it up and the group's leads the day before each share is due, and on the day. Opening the reminder prepares the summary for the right period.${lead?"":" Schedules you set up need a lead or assistant to approve them."}</div>
+   <div class="card"><div class="rows">${L2.map(p=>`<div class="ri" style="cursor:default"><div>${ic("cal")}</div><div style="min-width:0"><div class="t">${esc(FREQ_LBL[p.freq]||p.freq)} → ${esc(shareToText(p))}</div><div class="m">Next: ${esc(fmtS(p.next))} · set up by ${esc(who(p.by))}${p.approvedBy?" · approved by "+esc(who(p.approvedBy)):""}</div></div><div class="r">${epill(p.status==="Active"?"Active":p.status==="Pending"?"Pending":"Paused")}${p.status==="Pending"&&lead&&p.by!==me.id?`<button class="btn sm pri" data-spdo="${esc(p._id)}|Active">Approve</button>`:""}${(lead||p.by===me.id)&&p.status!=="Pending"?`<button class="btn sm ghost" data-spdo="${esc(p._id)}|${p.status==="Active"?"Paused":"Active"}">${p.status==="Active"?"Pause":"Resume"}</button>`:""}${lead||p.by===me.id?`<button class="btn sm ghost" data-spdel="${esc(p._id)}">Remove</button>`:""}</div></div>`).join("")||`<div class="empty">No scheduled shares yet.</div>`}</div></div>
+   <div class="card"><div class="hd"><h2>New schedule</h2></div><div class="bd stack"><div class="grid g2"><label class="f">How often<select class="in" id="spF">${Object.entries(FREQ_LBL).map(([k,l])=>`<option value="${k}" ${k==="monthly"?"selected":""}>${l}</option>`).join("")}</select></label><label class="f">First due date<input class="in" type="date" id="spD" value="${iso(new Date(today().getFullYear(),today().getMonth()+1,1))}"></label></div>
+    <div class="f">Share with groups${multiHTML("spG",[...S.teams].filter(x=>x._id!==g).sort(byFull).map(x=>[x._id,fullName(x)]),[])}</div>
+    <label class="f">…and/or people<select class="in" id="spU" multiple size="4">${S.members.filter(m=>m._id!==me.id).map(m=>[m._id,who(m._id)]).sort((x,y)=>x[1].localeCompare(y[1])).map(([id,nm])=>`<option value="${esc(id)}">${esc(nm)}</option>`).join("")}</select></label>
+    <button class="btn pri" id="spGo" style="align-self:flex-start">${lead?"Add schedule":"Send for approval"}</button></div></div>`,foot:`<span style="flex:1"></span><button class="btn ghost" data-close="1">Close</button>`});
+  document.getElementById("spGo").onclick=async()=>{const toGroups=readMulti("spG"),toPeople=[...document.getElementById("spU").selectedOptions].map(o=>o.value);const next=document.getElementById("spD").value;const freq=document.getElementById("spF").value;
+    if(!toGroups.length&&!toPeople.length){toast("Choose at least one group or person");return;}if(!next||next<tISO()){toast("Choose a first due date from today on");return;}
+    const d={g,kind,freq,next,toGroups,toPeople,by:me.id,at:nowISO(),status:lead?"Active":"Pending",approvedBy:lead?me.id:"",remindedFor:""};try{await db.collection("shareplans").add(d);}catch(e){toast(errMsg(e));return;}
+    if(!lead)notify(((groupById(g)||{}).leads||[]).filter(u=>u!==me.id),`Approve a scheduled share · ${groupName(g)}`,`${who(me.id)}: ${SHARE_KINDS[kind]} ${FREQ_LBL[freq].toLowerCase()} to ${shareToText(d)}.`,`mygroups:${g}`);
+    logAct("scheduled shared summary",`teams/${g}`,kind,`${FREQ_LBL[freq]} → ${shareToText(d)}`);closeLayer();toast(lead?"Schedule added":"Sent to the lead for approval");};};
+H8.spdo=async t=>{const[id,st]=t.dataset.spdo.split("|");const p=plansAll().find(x=>x._id===id);if(!p)return;const d={...p,status:st,...(st==="Active"&&p.status==="Pending"?{approvedBy:me.id}:{})};delete d._id;try{await db.doc(`shareplans/${id}`).set(d);toast(st==="Active"?"Active":"Paused");closeLayer();}catch(e){toast(errMsg(e));}};
+H8.spdel=async t=>{const id=t.dataset.spdel;if(!confirmArm("spd"+id)){t.textContent="Tap again";return;}try{await db.doc(`shareplans/${id}`).delete();toast("Removed");closeLayer();}catch(e){toast(errMsg(e));}};
+// in-app reminder when a scheduled share is due (the server also sends a phone alert each morning)
+setInterval(()=>{if(!me.id)return;for(const p of plansAll()){if(p.status!=="Active"||!p.next||!(p.by===me.id||realLead(p.g)))continue;const k=`spr:${p._id}:${p.next}`;if(p.next<=iso(addD(today(),1))&&!LS.get(k,0)){LS.set(k,1);toast(`📊 ${SHARE_KINDS[p.kind]} for ${groupName(p.g)} is due ${p.next<=tISO()?"today":"tomorrow"} – open the group's ${p.kind} tab to send it`);}}},60000);
+// count access requests and shares waiting for me (approvals page + badge)
+{const _ea=extraApprovals;extraApprovals=function(){return _ea()+bgDocs().filter(bgNeedsMe).length+sharesAll().filter(s=>s.status==="Pending"&&s.by!==me.id&&realLead(s.g)).length;};}
+
+// ================= security rules v11: verified email, group privacy, break-glass, shared summaries =================
+{const _rt=rulesText;rulesText=function(){let s=_rt().replace("security rules (v10)","security rules (v11)");
+  const R=(a,b)=>{if(!s.includes(a))console.warn("rules patch missed:",a.slice(0,70));s=s.replace(a,()=>b);};
+  R("function approved() { return owner() || (si() && exists(mref()) && mem().get('suspended', false) != true); }",
+    "function approved() { return owner() || (si() && request.auth.token.get('email_verified', false) == true && exists(mref()) && mem().get('suspended', false) != true); }");
+  R("    function protectedRoles() {",`    function member(g) { return approved() && mem().get('groups', []).hasAny([g]); }
+    function ldr(g) { return approved() && (team(g).get('leads', []).hasAny([uid()]) || team(team(g).get('parent', '-')).get('leads', []).hasAny([uid()])); }
+    function offc(g) { return ldr(g) || (approved() && get(/databases/$(database)/documents/teams/$(g)/crew/$(request.auth.uid)).data.get('sub', '') in ['Treasurer', 'Secretary']); }
+    function bgdoc(g) { return /databases/$(database)/documents/breakglass/$(g + '_' + request.auth.uid); }
+    function bg(g, t) { return si() && exists(bgdoc(g)) && get(bgdoc(g)).data.status == 'Active' && request.time.toMillis() < get(bgdoc(g)).data.untilMs && get(bgdoc(g)).data.tabs.hasAny([t]); }
+    function priv(g, t) { return member(g) || ovs(g) || bg(g, t) || ldr(g); }
+    function senior() { return approved() && mem().get('ptitle', '') != '' && mem().get('ptitle', '') == st().get('pastorTitles', ['Assembly Pastor'])[0]; }
+    function onProb() { return !owner() && exists(mref()) && request.time.toMillis() < mem().get('probMs', 0); }
+    function signupDoc() { return /databases/$(database)/documents/public/signup; }
+    function domainOK() { return !exists(signupDoc()) || (request.auth.token.email.lower().split('@')[1] in get(signupDoc()).data.get('allow', []) && !(request.auth.token.email.lower().split('@')[1] in get(signupDoc()).data.get('block', []))); }
+    function nameOK() { return !request.resource.data.keys().hasAny(['name']) || request.resource.data.name.matches('^[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ .\\'-]{1,59}$'); }
+    function protectedRoles() {`);
+  // public sign-up list: readable before signing in, written by Super Admins
+  R("match /public/{id} { allow read: if approved() || (si() && id == 'groups'); allow write: if canW('programs') || (id == 'groups' && canW('teams')); }",
+    "match /public/{id} { allow read: if id == 'signup' || approved() || (si() && id == 'groups'); allow write: if (id == 'signup' && sa()) || (id != 'signup' && (canW('programs') || (id == 'groups' && canW('teams')))); }");
+  // new sign-ups: verified email from an allowed provider, real-looking name
+  R("allow create, update: if admin() || (si() && uid() == u && !request.resource.data.keys().hasAny(['phone', 'email', 'area', 'address'])); allow delete: if admin(); }",
+    "allow create: if admin() || (si() && uid() == u && request.auth.token.get('email_verified', false) == true && domainOK() && nameOK() && !request.resource.data.keys().hasAny(['phone', 'email', 'area', 'address'])); allow update: if admin() || (si() && uid() == u && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['name']) || nameOK()) && !request.resource.data.keys().hasAny(['phone', 'email', 'area', 'address'])); allow delete: if admin(); }");
+    R("      allow write: if (si() && uid() == u) || admin();\n    }\n    match /members/","      allow write: if admin() || (si() && uid() == u && (!request.resource.data.keys().hasAny(['phone']) || request.resource.data.phone.matches('^[+]234[789][01][0-9]{8}$')));\n    }\n    match /members/");
+  // members: probation and pastorate titles are Super Admin matters
+  R("&& request.resource.data.get('suspended', false) == false);\n      allow update: if sa()","&& request.resource.data.get('suspended', false) == false && request.resource.data.get('ptitle', '') == '' && request.resource.data.get('probMs', 0) >= request.time.toMillis() + st().get('probDays', 7) * 86400000 - 3600000);\n      allow update: if sa()");
+  R("        && request.resource.data.get('suspended', false) == resource.data.get('suspended', false));",
+    "        && request.resource.data.get('suspended', false) == resource.data.get('suspended', false)\n        && request.resource.data.get('probMs', 0) == resource.data.get('probMs', 0) && request.resource.data.get('ptitle', '') == resource.data.get('ptitle', ''));");
+  // group contents are private to the group (members, leads, overseer) – or temporary approved access
+  R("match /chat/{id} { allow read: if see(g); allow create: if (inGroup(g) || ovs(g))","match /chat/{id} { allow read: if priv(g, 'chat'); allow create: if (member(g) || ovs(g) || ldr(g))");
+  R("match /chatreads/{u} { allow read: if see(g); allow write: if si() && uid() == u && (inGroup(g) || ovs(g)); }","match /chatreads/{u} { allow read: if priv(g, 'chat'); allow write: if si() && uid() == u && (member(g) || ovs(g) || ldr(g)); }");
+  R("match /log/{id} { allow read: if see(g); allow create: if inGroup(g) && mine('by'); allow update, delete: if lead(g); }","match /log/{id} { allow read: if priv(g, 'log'); allow create: if (member(g) || ldr(g)) && mine('by'); allow update, delete: if ldr(g); }");
+  R("      match /notices/{id} {\n        allow read: if see(g);","      match /notices/{id} {\n        allow read: if priv(g, 'notices');");
+  R("match /events/{id} { allow read: if see(g); allow write: if officer(g); }","match /events/{id} { allow read: if priv(g, 'calendar'); allow write: if offc(g); }");
+  R("match /inventory/{id} { allow read: if see(g); allow write: if officer(g); }","match /inventory/{id} { allow read: if priv(g, 'inventory'); allow write: if offc(g); }");
+  R("match /finance/{id} { allow read: if officer(g) || ovs(g) || canR('finance'); allow create: if officer(g);","match /finance/{id} { allow read: if offc(g) || ovs(g) || bg(g, 'finance'); allow create: if offc(g);");
+  R("match /dues/{id} { allow read: if see(g) || canR('finance'); allow write: if officer(g); }","match /dues/{id} { allow read: if priv(g, 'dues'); allow write: if offc(g); }");
+  R("match /duesplan/{id} { allow read: if see(g) || canR('finance'); allow create, update: if false; allow delete: if officer(g); }","match /duesplan/{id} { allow read: if priv(g, 'dues'); allow create, update: if false; allow delete: if offc(g); }");
+  R("match /duespay/{id} { allow read: if officer(g) || ovs(g) || canR('finance') || was('uid'); allow create: if officer(g);","match /duespay/{id} { allow read: if offc(g) || ovs(g) || was('uid') || bg(g, 'dues'); allow create: if offc(g);");
+  s=s.replace(/    match \/tasks\/\{id\} \{[\s\S]*?\n    \}\n/,()=>`    match /tasks/{id} {
+      allow read: if member(resource.data.ogid) || ovs(resource.data.ogid) || member(resource.data.gid) || ovs(resource.data.gid) || ldr(resource.data.gid) || was('assignee') || bg(resource.data.ogid, 'office') || bg(resource.data.gid, 'tasks');
+      allow create: if approved() && mine('reporter') && (member(request.resource.data.ogid) || ldr(request.resource.data.gid));
+      allow update: if member(resource.data.ogid) || member(resource.data.gid) || ovs(resource.data.gid) || ldr(resource.data.gid) || was('assignee');
+      allow delete: if member(resource.data.ogid);
+    }
+`);
+  s=s.replace(/    match \/minutes\/\{id\} \{[\s\S]*?\n    \}\n/,()=>`    match /minutes/{id} {
+      allow read: if member(resource.data.ogid) || ovs(resource.data.ogid) || bg(resource.data.ogid, 'office');
+      allow create, update: if member(request.resource.data.ogid);
+      allow delete: if member(resource.data.ogid);
+    }
+`);
+  // new accounts on probation can't make posts, mass messages or church notices
+  R("match /feed/{id} { allow read: if approved(); allow write: if canW('feed') && ","match /feed/{id} { allow read: if approved(); allow write: if canW('feed') && !onProb() && ");
+  R("match /campaigns/{id} { allow read: if approved(); allow write: if canW('campaigns'); }","match /campaigns/{id} { allow read: if approved(); allow write: if canW('campaigns') && !onProb(); }");
+  R("match /notices/{id} { allow read: if approved(); allow write: if canW('notices'); }","match /notices/{id} { allow read: if approved(); allow write: if canW('notices') && !onProb(); }");
+  R("    match /loginfails/{id} { allow read: if sa(); }",`    match /loginfails/{id} { allow read: if sa(); }
+    match /monitor_fin/{id} { allow read: if sa(); }
+    // temporary access to a group: requested by a Super Admin or the senior pastor, approved by a lead/assistant AND the overseer
+    match /breakglass/{id} {
+      allow read: if approved();
+      allow create: if (sa() || senior()) && mine('uid') && id == request.resource.data.g + '_' + uid() && request.resource.data.status == 'Pending'
+        && request.resource.data.get('la', null) == null && request.resource.data.get('ov', null) == null && request.resource.data.minutes >= 30 && request.resource.data.reason.size() >= 10;
+      allow update: if (approved() && resource.data.status == 'Pending' && uid() != resource.data.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['la', 'ov', 'status', 'tabs', 'untilMs', 'approvedAt'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasAny(['la', 'ov'])
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['la']) || (resource.data.get('la', null) == null && request.resource.data.la.by == uid() && ldr(resource.data.g) && request.resource.data.la.tabs.hasOnly(resource.data.tabs) && request.resource.data.la.minutes <= resource.data.minutes))
+          && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['ov']) || (resource.data.get('ov', null) == null && request.resource.data.ov.by == uid() && (ovs(resource.data.g) || (team(resource.data.g).get('overseers', []).size() == 0 && (senior() || sa()))) && request.resource.data.ov.tabs.hasOnly(resource.data.tabs) && request.resource.data.ov.minutes <= resource.data.minutes))
+          && (request.resource.data.status == 'Declined' || (request.resource.data.status == 'Pending' && request.resource.data.tabs == resource.data.tabs)
+            || (request.resource.data.status == 'Active' && request.resource.data.get('la', null) != null && request.resource.data.get('ov', null) != null
+              && request.resource.data.tabs.hasOnly(request.resource.data.la.tabs) && request.resource.data.tabs.hasOnly(request.resource.data.ov.tabs)
+              && request.resource.data.untilMs <= request.time.toMillis() + 60000 * (request.resource.data.la.minutes < request.resource.data.ov.minutes ? request.resource.data.la.minutes : request.resource.data.ov.minutes) + 60000)))
+        || (was('uid') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewed']))
+        || ((was('uid') || ldr(resource.data.g) || ovs(resource.data.g) || sa()) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'endedBy', 'endedAt']) && request.resource.data.status == 'Ended');
+      allow delete: if was('uid') && resource.data.status != 'Active';
+    }
+    // summaries shared out of a group or office (totals only)
+    match /shares/{id} {
+      allow read: if approved() && (resource.data.by == uid() || resource.data.get('toUsers', []).hasAny([uid()]) || member(resource.data.g) || ldr(resource.data.g));
+      allow create: if approved() && mine('by') && (member(request.resource.data.g) || ldr(request.resource.data.g)) && (request.resource.data.status == 'Pending' || (request.resource.data.status == 'Shared' && ldr(request.resource.data.g)));
+      allow update: if (ldr(resource.data.g) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'approvedBy', 'approvedAt', 'withdrawnBy', 'withdrawnAt'])
+          && (request.resource.data.status == 'Withdrawn' || (resource.data.status == 'Pending' && resource.data.by != uid() && request.resource.data.status in ['Shared', 'Declined'])))
+        || (was('by') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'withdrawnBy', 'withdrawnAt']) && request.resource.data.status == 'Withdrawn');
+      allow delete: if was('by') && resource.data.status == 'Pending';
+    }
+    match /shareplans/{id} {
+      allow read: if member(resource.data.g) || ldr(resource.data.g) || was('by');
+      allow create: if approved() && mine('by') && (member(request.resource.data.g) || ldr(request.resource.data.g)) && (request.resource.data.status == 'Pending' || ldr(request.resource.data.g));
+      allow update: if ldr(resource.data.g) || (was('by') && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['next', 'lastSent', 'remindedFor', 'status']) && (request.resource.data.status == resource.data.status || (resource.data.status != 'Pending' && request.resource.data.status in ['Active', 'Paused'])));
+      allow delete: if ldr(resource.data.g) || was('by');
+    }`);
   return s;};}
 
 // ================= settings =================

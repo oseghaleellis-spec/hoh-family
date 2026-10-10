@@ -89,11 +89,20 @@ exports.handler = async (event) => {
   // A revoked device stays revoked until the person signs in again (a sign-in newer than the sign-out)
   const signedInAfter = old.revokedAt && caller.auth_time * 1000 > Date.parse(old.revokedAt);
   // first time this person signs in from a new country? tell the Super Admins
-  if (!snap.exists && country) {
+  if (!snap.exists) {
     try {
       const others = await db.collection("sessions").where("uid", "==", caller.uid).get();
+      // "Was this you?" – tell the person whenever their account signs in on a new phone or computer
+      if (others.size) {
+        const label = String(p.label || "a new device").slice(0, 80);
+        const where = [city, country].filter(Boolean).join(", ");
+        const title = "New sign-in on your account";
+        const body = `${label}${where ? " in " + where : ""}. If this wasn't you, open My Profile → My devices and sign out everywhere, then change your password.`;
+        await db.collection(`inbox/${caller.uid}/items`).add({ title, body, page: "profile", at: now, read: false, from: "system" }).catch(() => {});
+        try { const t = await db.doc(`pushTokens/${caller.uid}`).get(); const tokens = t.exists ? t.data().tokens || [] : []; if (tokens.length) await a.messaging().sendEachForMulticast({ tokens: tokens.slice(0, 500), data: { title, body, page: "profile" }, webpush: { headers: { Urgency: "high", TTL: "86400" } } }); } catch (e) {}
+      }
       const seen = new Set(others.docs.map((d) => d.data().country).filter(Boolean));
-      if (seen.size && !seen.has(country)) {
+      if (country && seen.size && !seen.has(country)) {
         const pr = await db.doc(`profiles/${caller.uid}`).get();
         const name = (pr.exists && pr.data().name) || caller.email || "A member";
         await alertSA(a, db, "⚠ Sign-in from a new country", `${name} signed in from ${city ? city + ", " : ""}${country} for the first time (usually ${[...seen].join(", ")}).`, "monitor");

@@ -12,6 +12,10 @@
 [functions."reminders"]
   schedule = "0 6 * * *"
 
+# Every day at 07:10 Lagos time: finance checks (counts only), report-share reminders, expired temporary access
+[functions."safety"]
+  schedule = "10 6 * * *"
+
 [[headers]]
   for = "/sw.js"
   [headers.values]
